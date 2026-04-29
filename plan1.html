@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>แผนซื้อ กฟฉ.1</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="data.js"></script>
+    <style>
+        .header-bg { background-color: #e84393; color: white; padding: 10px 20px; border-radius: 20px; font-size: 24px; font-weight: bold; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(232, 67, 147, 0.3); display: inline-block;}
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="index.html" class="nav-btn">📊 หน้ากราฟ (Dashboard)</a>
+        <a href="demand.html" class="nav-btn">📋 ตารางความต้องการ</a>
+        <a href="me2n.html" class="nav-btn">📦 วัสดุรอนำเข้า (ME2N)</a>
+        <a href="plan1.html" class="nav-btn" style="background-color: #e84393; border-color: #e84393; font-weight:bold;">🛒 แผนซื้อ กฟฉ.1</a>
+        
+        <div style="margin-left: auto; align-self: center; font-size: 14px; color: #ecf0f1;">
+            🕒 อัปเดตข้อมูลล่าสุด: <span id="lastUpdatedText" style="color: #f1c40f; font-weight: bold;"></span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="filter-section" style="margin-bottom:0; background:none; border:none; padding:0;">
+                <div><label><b>🔍 ประเภท:</b></label> <select id="categoryFilter" onchange="applyFilters()"><option value="ALL">รวมทั้งหมด</option></select></div>
+                <div><label><b>🏭 ผู้ขาย/โรงงาน:</b></label> <select id="vendorFilter" onchange="applyFilters()"><option value="ALL">รวมทั้งหมด</option></select></div>
+            </div>
+            <div class="header-bg">แผนจัดซื้อ กฟฉ.1 (DAN)</div>
+        </div>
+
+        <div class="table-wrapper" style="margin-top: 20px; max-height: 650px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ลำดับ</th>
+                        <th>เอกสารการจัดซื้อ (PO)</th>
+                        <th>ผู้ขาย/โรงงานผู้จัดหาวัสดุ</th>
+                        <th>ที่เก็บสินค้า</th>
+                        <th>วัสดุ</th>
+                        <th>ข้อความสั้น</th>
+                        <th style="text-align:right">จำนวน</th>
+                    </tr>
+                </thead>
+                <tbody id="detBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    function init() {
+        document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
+        
+        // เช็คว่ามีข้อมูล me2n1DetailsData หรือไม่ (กัน Error ถ้ารันไฟล์ครั้งแรก)
+        if(typeof me2n1DetailsData === 'undefined') {
+            document.getElementById('detBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">ไม่พบข้อมูล 13.ME2N1.xlsx (รอ GitHub อัปเดต)</td></tr>';
+            return;
+        }
+
+        const uniqueCat = [...new Set(me2n1DetailsData.map(i => i.Category))].sort();
+        uniqueCat.forEach(c => document.getElementById('categoryFilter').appendChild(new Option(c, c)));
+        me2n1Vendors.forEach(v => document.getElementById('vendorFilter').appendChild(new Option(v, v)));
+        applyFilters();
+    }
+
+    function applyFilters() {
+        if(typeof me2n1DetailsData === 'undefined') return;
+
+        const cat = document.getElementById('categoryFilter').value;
+        const ven = document.getElementById('vendorFilter').value;
+        
+        let fd = me2n1DetailsData;
+        if(cat !== 'ALL') fd = fd.filter(i => i.Category === cat);
+        if(ven !== 'ALL') fd = fd.filter(i => i['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'] === ven);
+
+        let hDet = '', idx = 1;
+        if(fd.length === 0) {
+            hDet = '<tr><td colspan="7" style="text-align:center; padding:20px;">ไม่มีรายการสั่งซื้อที่ตรงกับเงื่อนไข</td></tr>';
+        } else {
+            fd.forEach(i => {
+                let safeTxt = i['ข้อความส่วนหัว'] ? i['ข้อความส่วนหัว'].replace(/'/g, "\\'") : '';
+                let poHtml = i['ข้อความส่วนหัว'] ? `<span title="${safeTxt}" style="border-bottom:1px dashed #7f8c8d; cursor:help;">${i['เอกสารการจัดซื้อ']}</span> <button onclick="copyTxt(this, '${safeTxt}')" class="copy-icon-btn">📋</button>` : i['เอกสารการจัดซื้อ'];
+                
+                hDet += `<tr><td style="text-align:center">${idx++}</td><td>${poHtml}</td><td>${i['ผู้ขาย/โรงงานผู้จัดหาวัสดุ']}</td><td style="text-align:center;">${i['ที่เก็บสินค้า']}</td><td><b>${i['วัสดุ']}</b></td><td>${i['ข้อความสั้น']}</td><td style="text-align:right; color:#d35400"><b>${i['ยังจะถูกส่งมอบ (ปริมาณ)'].toLocaleString()}</b></td></tr>`;
+            });
+        }
+        document.getElementById('detBody').innerHTML = hDet;
+    }
+
+    window.copyTxt = function(btn, txt) {
+        navigator.clipboard.writeText(txt);
+        let o = btn.innerHTML; btn.innerHTML = '✅'; setTimeout(() => btn.innerHTML = o, 1500);
+    };
+    window.onload = init;
+</script>
+</body>
+</html>

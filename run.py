@@ -8,6 +8,7 @@ file_mb52 = '6.mb52.XLSX'
 file_zmb25 = '11.zmb25.XLSX'
 file_cn43n = '14.CN43N.xlsx'
 file_me2n = '12.ME2N.xlsx'
+file_me2n1 = '13.ME2N1.xlsx'
 
 print("กำลังอ่านไฟล์ Excel...")
 df_stock = pd.read_excel(file_mb52)
@@ -45,7 +46,7 @@ def get_project_group(wbs):
     elif wbs.startswith('P-TDD02'): return 'คพจ2'
     return 'อื่นๆ'
 
-# 3. จัดการ WBS และสร้างตาราง
+# 3. จัดการ WBS และสร้างตารางหลัก
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
 pie_summary = df_demand.groupby('Project_Group')['องค์ประกอบ WBS'].nunique().reset_index().rename(columns={'องค์ประกอบ WBS': 'WBS_Count'})
 
@@ -75,7 +76,7 @@ wbs_details = pd.merge(wbs_details, wbs_pending, on='องค์ประกอ
 wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'คำอธิบายวัสดุ', 'Stock', 'Balance']], on='วัสดุ', how='left').fillna('-')
 wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 
-# 4. จัดการ ME2N
+# 4. จัดการ ME2N (D060)
 df_me2n_d060 = df_me2n[df_me2n['โรงงาน'] == 'D060'].copy()
 df_me2n_d060['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n_d060['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
 df_me2n_d060['ที่เก็บสินค้า'] = df_me2n_d060['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
@@ -88,13 +89,29 @@ me2n_summary = df_me2n_active.groupby(['วัสดุ', 'ข้อความ
 me2n_details = df_me2n_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
 me2n_vendors = sorted([str(v) for v in df_me2n_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
 
-# =========================================================
-# 5. หาวันที่และเวลาอัปเดตปัจจุบัน (ตั้งค่าให้เป็นเวลาไทย)
-# =========================================================
+# 5. จัดการ ME2N1 (แผนซื้อ กฟฉ.1 - กรอง DAN)
+try:
+    df_me2n1 = pd.read_excel(file_me2n1)
+    df_me2n1_dan = df_me2n1[df_me2n1['กลุ่มการจัดซื้อ'] == 'DAN'].copy()
+    df_me2n1_dan['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n1_dan['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
+    df_me2n1_dan['ที่เก็บสินค้า'] = df_me2n1_dan['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
+    df_me2n1_dan['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'] = df_me2n1_dan['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].fillna('-ไม่ระบุ-')
+    df_me2n1_dan['ข้อความส่วนหัว'] = df_me2n1_dan['ข้อความส่วนหัว'].fillna('')
+    df_me2n1_dan['Category'] = df_me2n1_dan['วัสดุ'].apply(get_category)
+    
+    df_me2n1_active = df_me2n1_dan[df_me2n1_dan['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
+    me2n1_details = df_me2n1_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
+    me2n1_vendors = sorted([str(v) for v in df_me2n1_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
+except Exception as e:
+    print(f"Warning: ME2N1 processing error: {e}")
+    me2n1_details = pd.DataFrame()
+    me2n1_vendors = []
+
+# 6. หาวันที่อัปเดต
 tz_th = timezone(timedelta(hours=7))
 update_time = datetime.now(tz_th).strftime("%d/%m/%Y เวลา %H:%M น.")
 
-# 6. เขียนข้อมูลลงไฟล์ data.js
+# 7. เขียนข้อมูลลงไฟล์ data.js
 js_content = f"""// ไฟล์นี้ถูกสร้างอัตโนมัติจาก Python (ห้ามแก้ไขด้วยมือ)
 const lastUpdated = "{update_time}";
 const pieRawData = {json.dumps(pie_summary.to_dict(orient='records'))};
@@ -105,6 +122,8 @@ const wbsDataByWbs = {json.dumps({wbs: grp.to_dict(orient='records') for wbs, gr
 const me2nSummaryData = {json.dumps(me2n_summary.to_dict(orient='records'))};
 const me2nDetailsData = {json.dumps(me2n_details.to_dict(orient='records'))};
 const me2nVendors = {json.dumps(me2n_vendors)};
+const me2n1DetailsData = {json.dumps(me2n1_details.to_dict(orient='records'))};
+const me2n1Vendors = {json.dumps(me2n1_vendors)};
 """
 
 with open('data.js', 'w', encoding='utf-8') as f:

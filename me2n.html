@@ -11,8 +11,7 @@
         <a href="index.html" class="nav-btn">📊 หน้ากราฟ (Dashboard)</a>
         <a href="demand.html" class="nav-btn">📋 ตารางความต้องการ</a>
         <a href="me2n.html" class="nav-btn active-btn">📦 วัสดุรอนำเข้า (ME2N)</a>
-        
-        <!-- โชว์วันที่อัปเดต มุมขวาบน -->
+        <a href="plan1.html" class="nav-btn" style="background-color: #e84393; border-color: #e84393;">🛒 แผนซื้อ กฟฉ.1</a>
         <div style="margin-left: auto; align-self: center; font-size: 14px; color: #ecf0f1;">
             🕒 อัปเดตข้อมูลล่าสุด: <span id="lastUpdatedText" style="color: #f1c40f; font-weight: bold;"></span>
         </div>
@@ -28,36 +27,23 @@
             <h2>📦 1. สรุปรายการวัสดุที่รอนำเข้า</h2>
             <button onclick="selectedMat=null; applyFilters()" style="padding: 5px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">ล้างการเลือกวัสดุ</button>
         </div>
-        
-        <div class="table-wrapper" style="max-height: 300px;">
-            <table>
-                <thead><tr><th>รหัสวัสดุ (คลิกเพื่อกรอง)</th><th>ชื่ออุปกรณ์</th><th style="text-align:right">ยอดรอส่งมอบรวม</th></tr></thead>
-                <tbody id="sumBody"></tbody>
-            </table>
-        </div>
+        <div class="table-wrapper" style="max-height: 300px;"><table><thead><tr><th>รหัสวัสดุ (คลิกเพื่อกรอง)</th><th>ชื่ออุปกรณ์</th><th style="text-align:right">ยอดรอส่งมอบรวม</th></tr></thead><tbody id="sumBody"></tbody></table></div>
 
         <h2>📝 2. รายละเอียดเอกสารการจัดซื้อ (PO)</h2>
         <div class="table-wrapper" style="max-height: 500px;">
-            <table>
-                <thead><tr><th>ลำดับ</th><th>PO (ชี้เพื่อดูส่วนหัว)</th><th>ผู้ขาย</th><th>คลัง</th><th>วัสดุ</th><th>ข้อความสั้น</th><th style="text-align:right">จำนวน</th></tr></thead>
-                <tbody id="detBody"></tbody>
-            </table>
+            <table><thead><tr><th>ลำดับ</th><th>PO (ชี้เพื่อดูส่วนหัว)</th><th>ผู้ขาย</th><th>คลัง</th><th>วัสดุ</th><th>ข้อความสั้น</th><th style="text-align:right">จำนวน</th></tr></thead><tbody id="detBody"></tbody></table>
         </div>
     </div>
 
 <script>
     let selectedMat = null;
-
     function init() {
-        // ดึงเวลาจากไฟล์ data.js มาแสดง
         document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
-
         const uniqueCat = [...new Set(me2nSummaryData.map(i => i.Category))].sort();
         uniqueCat.forEach(c => document.getElementById('categoryFilter').appendChild(new Option(c, c)));
         me2nVendors.forEach(v => document.getElementById('vendorFilter').appendChild(new Option(v, v)));
         applyFilters();
     }
-
     function applyFilters() {
         const cat = document.getElementById('categoryFilter').value, ven = document.getElementById('vendorFilter').value;
         let detData = me2nDetailsData;
@@ -65,35 +51,19 @@
         if(ven !== 'ALL') detData = detData.filter(i => i['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'] === ven);
 
         let newSum = {};
-        detData.forEach(i => {
-            if(!newSum[i['วัสดุ']]) newSum[i['วัสดุ']] = { mat: i['วัสดุ'], desc: i['ข้อความสั้น'], qty: 0 };
-            newSum[i['วัสดุ']].qty += i['ยังจะถูกส่งมอบ (ปริมาณ)'];
-        });
+        detData.forEach(i => { if(!newSum[i['วัสดุ']]) newSum[i['วัสดุ']] = { mat: i['วัสดุ'], desc: i['ข้อความสั้น'], qty: 0 }; newSum[i['วัสดุ']].qty += i['ยังจะถูกส่งมอบ (ปริมาณ)']; });
 
-        let hSum = '';
-        Object.values(newSum).forEach(r => {
-            hSum += `<tr style="cursor:pointer; background:${selectedMat===r.mat?'#d5f5e3':''}" onclick="selectedMat='${r.mat}'; applyFilters();">
-                <td class="wbs-link"><b>${r.mat}</b></td><td>${r.desc}</td><td style="text-align:right; color:#27ae60"><b>${r.qty}</b></td></tr>`;
-        });
-        document.getElementById('sumBody').innerHTML = hSum;
+        let hSum = ''; Object.values(newSum).forEach(r => { hSum += `<tr style="cursor:pointer; background:${selectedMat===r.mat?'#d5f5e3':''}" onclick="selectedMat='${r.mat}'; applyFilters();"><td class="wbs-link"><b>${r.mat}</b></td><td>${r.desc}</td><td style="text-align:right; color:#27ae60"><b>${r.qty}</b></td></tr>`; }); document.getElementById('sumBody').innerHTML = hSum;
 
-        let fd = detData;
-        if(selectedMat) fd = fd.filter(i => i['วัสดุ'] === selectedMat);
+        let fd = detData; if(selectedMat) fd = fd.filter(i => i['วัสดุ'] === selectedMat);
         let hDet = '', idx = 1;
         fd.forEach(i => {
             let safeTxt = i['ข้อความส่วนหัว'] ? i['ข้อความส่วนหัว'].replace(/'/g, "\\'") : '';
             let poHtml = i['ข้อความส่วนหัว'] ? `<span title="${safeTxt}" style="border-bottom:1px dashed #7f8c8d; cursor:help;">${i['เอกสารการจัดซื้อ']}</span> <button onclick="copyTxt(this, '${safeTxt}')" class="copy-icon-btn">📋</button>` : i['เอกสารการจัดซื้อ'];
-            
-            hDet += `<tr><td style="text-align:center">${idx++}</td><td>${poHtml}</td><td>${i['ผู้ขาย/โรงงานผู้จัดหาวัสดุ']}</td><td>${i['ที่เก็บสินค้า']}</td>
-            <td><b>${i['วัสดุ']}</b></td><td>${i['ข้อความสั้น']}</td><td style="text-align:right; color:#d35400"><b>${i['ยังจะถูกส่งมอบ (ปริมาณ)']}</b></td></tr>`;
-        });
-        document.getElementById('detBody').innerHTML = hDet;
+            hDet += `<tr><td style="text-align:center">${idx++}</td><td>${poHtml}</td><td>${i['ผู้ขาย/โรงงานผู้จัดหาวัสดุ']}</td><td>${i['ที่เก็บสินค้า']}</td><td><b>${i['วัสดุ']}</b></td><td>${i['ข้อความสั้น']}</td><td style="text-align:right; color:#d35400"><b>${i['ยังจะถูกส่งมอบ (ปริมาณ)']}</b></td></tr>`;
+        }); document.getElementById('detBody').innerHTML = hDet;
     }
-
-    window.copyTxt = function(btn, txt) {
-        navigator.clipboard.writeText(txt);
-        let o = btn.innerHTML; btn.innerHTML = '✅'; setTimeout(() => btn.innerHTML = o, 1500);
-    };
+    window.copyTxt = function(btn, txt) { navigator.clipboard.writeText(txt); let o = btn.innerHTML; btn.innerHTML = '✅'; setTimeout(() => btn.innerHTML = o, 1500); };
     window.onload = init;
 </script>
 </body>
