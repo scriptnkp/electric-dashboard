@@ -8,21 +8,30 @@
 </head>
 <body>
     <div class="navbar">
-        <a href="index.html" class="nav-btn">📊 หน้ากราฟ (Dashboard)</a>
+        <a href="index.html" class="nav-btn">📊 หน้ากราฟ</a>
         <a href="demand.html" class="nav-btn active-btn">📋 ตารางความต้องการ</a>
         <a href="me2n.html" class="nav-btn">📦 วัสดุรอนำเข้า (ME2N)</a>
-        <a href="plan1.html" class="nav-btn" style="background-color: #e84393; border-color: #e84393;">🛒 แผนซื้อ กฟฉ.1</a>
+        <a href="plan1.html" class="nav-btn" style="background-color: #e84393; border-color: #e84393; font-weight:bold;">🛒 แผนซื้อ กฟฉ.1</a>
+        <a href="allocate.html" class="nav-btn" style="background-color: #63cdda; border-color: #63cdda; color:#2c3e50; font-weight:bold;">🚚 จัดสรรให้คลังต่างๆ</a>
         <div style="margin-left: auto; align-self: center; font-size: 14px; color: #ecf0f1;">
-            🕒 อัปเดตข้อมูลล่าสุด: <span id="lastUpdatedText" style="color: #f1c40f; font-weight: bold;"></span>
+            🕒 อัปเดตล่าสุด: <span id="lastUpdatedText" style="color: #f1c40f; font-weight: bold;"></span>
         </div>
     </div>
 
     <div class="container">
-        <div class="filter-section">
-            <div><label><b>🔍 ประเภท:</b></label> <select id="categoryFilter" onchange="applyFilters()"><option value="ALL">รวมทั้งหมด</option></select></div>
-            <div><label><b>⚖️ สถานะ:</b></label> <select id="balanceFilter" onchange="applyFilters()"><option value="ALL">ทั้งหมด</option><option value="SHORTAGE">🔴 ของขาด</option><option value="SURPLUS">🟢 ของเหลือ</option></select></div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div class="filter-section" style="margin-bottom:0; background:none; border:none; padding:0;">
+                <div><label><b>🔍 ประเภท:</b></label> <select id="categoryFilter" onchange="applyFilters()"><option value="ALL">รวมทั้งหมด</option></select></div>
+                <div><label><b>⚖️ สถานะ:</b></label> <select id="balanceFilter" onchange="applyFilters()"><option value="ALL">ทั้งหมด</option><option value="SHORTAGE">🔴 ของขาด</option><option value="SURPLUS">🟢 ของเหลือ</option></select></div>
+            </div>
+            
+            <!-- ป้ายชื่อมุมขวาบน -->
+            <div class="header-badge bg-dark">📋 ตารางความต้องการรวม</div>
         </div>
-        <div class="table-wrapper"><table><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+
+        <div class="table-wrapper" style="margin-top: 20px;">
+            <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+        </div>
     </div>
 
     <!-- Modal Popup -->

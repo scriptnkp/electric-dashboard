@@ -30,8 +30,7 @@ cat_map = {
     '1-01-011': 'สลักเกลียว', '1-01-012': 'สลักเกลียว', '1-01-013': 'สลักเกลียว', '1-01-014': 'สลักเกลียว', '1-01-015': 'สลักเกลียว', '1-01-016': 'สลักเกลียว',
     '1-07-001': 'ชุดโคมไฟ', '1-07-003': 'ชุดโคมไฟ', '1-08-006': 'โซล่าเซล'
 }
-def get_category(mat_code):
-    return cat_map.get(str(mat_code)[:8], 'วัสดุอื่นๆ')
+def get_category(mat_code): return cat_map.get(str(mat_code)[:8], 'วัสดุอื่นๆ')
 
 def get_project_group(wbs):
     wbs = str(wbs).strip().upper()
@@ -46,7 +45,7 @@ def get_project_group(wbs):
     elif wbs.startswith('P-TDD02'): return 'คพจ2'
     return 'อื่นๆ'
 
-# 3. จัดการ WBS และสร้างตารางหลัก
+# 3. จัดการ WBS
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
 pie_summary = df_demand.groupby('Project_Group')['องค์ประกอบ WBS'].nunique().reset_index().rename(columns={'องค์ประกอบ WBS': 'WBS_Count'})
 
@@ -76,20 +75,32 @@ wbs_details = pd.merge(wbs_details, wbs_pending, on='องค์ประกอ
 wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'คำอธิบายวัสดุ', 'Stock', 'Balance']], on='วัสดุ', how='left').fillna('-')
 wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 
-# 4. จัดการ ME2N (D060)
-df_me2n_d060 = df_me2n[df_me2n['โรงงาน'] == 'D060'].copy()
-df_me2n_d060['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n_d060['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
-df_me2n_d060['ที่เก็บสินค้า'] = df_me2n_d060['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
-df_me2n_d060['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'] = df_me2n_d060['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].fillna('-ไม่ระบุ-')
-df_me2n_d060['ข้อความส่วนหัว'] = df_me2n_d060['ข้อความส่วนหัว'].fillna('')
-df_me2n_d060['Category'] = df_me2n_d060['วัสดุ'].apply(get_category)
+# 4. จัดการ ME2N (D060 รับเข้า)
+df_me2n_in = df_me2n[df_me2n['โรงงาน'] == 'D060'].copy()
+df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
+df_me2n_in['ที่เก็บสินค้า'] = df_me2n_in['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
+df_me2n_in['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'] = df_me2n_in['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].fillna('-ไม่ระบุ-')
+df_me2n_in['ข้อความส่วนหัว'] = df_me2n_in['ข้อความส่วนหัว'].fillna('')
+df_me2n_in['Category'] = df_me2n_in['วัสดุ'].apply(get_category)
 
-df_me2n_active = df_me2n_d060[df_me2n_d060['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
-me2n_summary = df_me2n_active.groupby(['วัสดุ', 'ข้อความสั้น', 'Category'])['ยังจะถูกส่งมอบ (ปริมาณ)'].sum().reset_index()
-me2n_details = df_me2n_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
-me2n_vendors = sorted([str(v) for v in df_me2n_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
+me2n_active = df_me2n_in[df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
+me2n_summary = me2n_active.groupby(['วัสดุ', 'ข้อความสั้น', 'Category'])['ยังจะถูกส่งมอบ (ปริมาณ)'].sum().reset_index()
+me2n_details = me2n_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
+me2n_vendors = sorted([str(v) for v in me2n_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
 
-# 5. จัดการ ME2N1 (แผนซื้อ กฟฉ.1 - กรอง DAN)
+# 5. จัดการ ME2N (D060 ส่งออก/จัดสรรให้คลังอื่น - หาจากคอลัมน์ "ผู้ขาย/โรงงานผู้จัดหาวัสดุ")
+df_me2n_out = df_me2n[df_me2n['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].astype(str).str.contains('D060', na=False, case=False)].copy()
+df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
+df_me2n_out['ที่เก็บสินค้า'] = df_me2n_out['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
+df_me2n_out['ข้อความส่วนหัว'] = df_me2n_out['ข้อความส่วนหัว'].fillna('')
+df_me2n_out['Category'] = df_me2n_out['วัสดุ'].apply(get_category)
+df_me2n_out['โรงงาน'] = df_me2n_out['โรงงาน'].fillna('-ไม่ระบุ-') # คลังปลายทาง
+
+alloc_active = df_me2n_out[df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
+alloc_details = alloc_active[['เอกสารการจัดซื้อ', 'โรงงาน', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
+alloc_plants = sorted([str(v) for v in alloc_active['โรงงาน'].unique() if str(v) != '-ไม่ระบุ-'])
+
+# 6. จัดการ ME2N1 (แผนซื้อ กฟฉ.1 - กรอง DAN)
 try:
     df_me2n1 = pd.read_excel(file_me2n1)
     df_me2n1_dan = df_me2n1[df_me2n1['กลุ่มการจัดซื้อ'] == 'DAN'].copy()
@@ -107,11 +118,11 @@ except Exception as e:
     me2n1_details = pd.DataFrame()
     me2n1_vendors = []
 
-# 6. หาวันที่อัปเดต
+# หาวันที่อัปเดต
 tz_th = timezone(timedelta(hours=7))
 update_time = datetime.now(tz_th).strftime("%d/%m/%Y เวลา %H:%M น.")
 
-# 7. เขียนข้อมูลลงไฟล์ data.js
+# เขียนข้อมูลลงไฟล์ data.js
 js_content = f"""// ไฟล์นี้ถูกสร้างอัตโนมัติจาก Python (ห้ามแก้ไขด้วยมือ)
 const lastUpdated = "{update_time}";
 const pieRawData = {json.dumps(pie_summary.to_dict(orient='records'))};
@@ -124,9 +135,9 @@ const me2nDetailsData = {json.dumps(me2n_details.to_dict(orient='records'))};
 const me2nVendors = {json.dumps(me2n_vendors)};
 const me2n1DetailsData = {json.dumps(me2n1_details.to_dict(orient='records'))};
 const me2n1Vendors = {json.dumps(me2n1_vendors)};
+const allocDetailsData = {json.dumps(alloc_details.to_dict(orient='records'))};
+const allocPlants = {json.dumps(alloc_plants)};
 """
 
-with open('data.js', 'w', encoding='utf-8') as f:
-    f.write(js_content)
-
+with open('data.js', 'w', encoding='utf-8') as f: f.write(js_content)
 print(f"สร้างไฟล์ data.js สำเร็จ! (อัปเดตข้อมูลเมื่อ: {update_time})")
