@@ -1,6 +1,7 @@
 import pandas as pd
 import json
 import os
+from datetime import datetime, timezone, timedelta
 
 # 1. ตั้งค่าไฟล์
 file_mb52 = '6.mb52.XLSX'
@@ -52,12 +53,10 @@ pivot_demand = df_demand.pivot_table(index='วัสดุ', columns='Project_G
 project_cols = [col for col in pivot_demand.columns if col != 'วัสดุ']
 pivot_demand['Total_Demand'] = pivot_demand[project_cols].sum(axis=1)
 
-# ชื่ออุปกรณ์
 mat_desc_demand = df_demand[['วัสดุ', 'คำอธิบายวัสดุ']].replace(r'^\s*$', pd.NA, regex=True).dropna(subset=['คำอธิบายวัสดุ']).drop_duplicates(subset=['วัสดุ'])
 mat_desc_stock = df_stock[['วัสดุ', 'คำอธิบายวัสดุ']].replace(r'^\s*$', pd.NA, regex=True).dropna(subset=['คำอธิบายวัสดุ']).drop_duplicates(subset=['วัสดุ'])
 mat_desc = pd.concat([mat_desc_demand, mat_desc_stock]).drop_duplicates(subset=['วัสดุ'], keep='first')
 
-# สต๊อก D060
 target_locs = ['0021', '0022', '0023', '0024', '0025', '6001', '6002', '6003', '6004', '6006', '6007', '6008', '6009', '6010', '6011']
 df_stock['ที่เก็บสินค้า'] = df_stock['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].str.zfill(4)
 stock_summary = df_stock[(df_stock['โรงงาน'] == 'D060') & (df_stock['ที่เก็บสินค้า'].isin(target_locs))].groupby('วัสดุ')['ที่ใช้ได้'].sum().reset_index().rename(columns={'ที่ใช้ได้': 'Stock'})
@@ -69,7 +68,6 @@ final_df['Category'] = final_df['วัสดุ'].apply(get_category)
 for col in project_cols:
     if col not in final_df.columns: final_df[col] = 0
 
-# WBS Details
 df_proj['Status_Short'] = df_proj['สถานะ'].apply(lambda x: str(x).split('//')[-1].strip() if pd.notna(x) else "")
 wbs_pending = df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount')
 wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง']], df_proj[['องค์ประกอบ WBS', 'ชื่อ', 'Status_Short', 'ผู้สมัคร']], on='องค์ประกอบ WBS', how='left')
@@ -90,8 +88,15 @@ me2n_summary = df_me2n_active.groupby(['วัสดุ', 'ข้อความ
 me2n_details = df_me2n_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
 me2n_vendors = sorted([str(v) for v in df_me2n_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
 
-# 5. เขียนข้อมูลทั้งหมดลงไฟล์ data.js
+# =========================================================
+# 5. หาวันที่และเวลาอัปเดตปัจจุบัน (ตั้งค่าให้เป็นเวลาไทย)
+# =========================================================
+tz_th = timezone(timedelta(hours=7))
+update_time = datetime.now(tz_th).strftime("%d/%m/%Y เวลา %H:%M น.")
+
+# 6. เขียนข้อมูลลงไฟล์ data.js
 js_content = f"""// ไฟล์นี้ถูกสร้างอัตโนมัติจาก Python (ห้ามแก้ไขด้วยมือ)
+const lastUpdated = "{update_time}";
 const pieRawData = {json.dumps(pie_summary.to_dict(orient='records'))};
 const mainData = {json.dumps(final_df.to_dict(orient='records'))};
 const projectGroups = {json.dumps(project_cols)};
@@ -105,4 +110,4 @@ const me2nVendors = {json.dumps(me2n_vendors)};
 with open('data.js', 'w', encoding='utf-8') as f:
     f.write(js_content)
 
-print("สร้างไฟล์ data.js สำเร็จ! เปิดไฟล์ HTML เพื่อดูผลลัพธ์ได้เลยครับ")
+print(f"สร้างไฟล์ data.js สำเร็จ! (อัปเดตข้อมูลเมื่อ: {update_time})")

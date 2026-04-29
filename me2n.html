@@ -11,6 +11,10 @@
         <a href="index.html" class="nav-btn">📊 หน้ากราฟ (Dashboard)</a>
         <a href="demand.html" class="nav-btn">📋 ตารางความต้องการ</a>
         <a href="me2n.html" class="nav-btn active-btn">📦 วัสดุรอนำเข้า (ME2N)</a>
+        
+        <div style="margin-left: auto; align-self: center; font-size: 14px; color: #ecf0f1;">
+            🕒 อัปเดตข้อมูลล่าสุด: <span id="lastUpdatedText" style="color: #f1c40f; font-weight: bold;"></span>
+        </div>
     </div>
 
     <div class="container">
@@ -44,6 +48,8 @@
     let selectedMat = null;
 
     function init() {
+        document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'ยังไม่มีข้อมูล';
+
         const uniqueCat = [...new Set(me2nSummaryData.map(i => i.Category))].sort();
         uniqueCat.forEach(c => document.getElementById('categoryFilter').appendChild(new Option(c, c)));
         me2nVendors.forEach(v => document.getElementById('vendorFilter').appendChild(new Option(v, v)));
