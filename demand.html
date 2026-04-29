@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ตารางความต้องการ</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="data.js"></script>
+</head>
+<body>
+    <div class="navbar">
+        <a href="dashboard.html" class="nav-btn">📊 หน้ากราฟ (Dashboard)</a>
+        <a href="demand.html" class="nav-btn active-btn">📋 ตารางความต้องการ</a>
+        <a href="me2n.html" class="nav-btn">📦 วัสดุรอนำเข้า (ME2N)</a>
+    </div>
+
+    <div class="container">
+        <div class="filter-section">
+            <div><label><b>🔍 ประเภท:</b></label> <select id="categoryFilter" onchange="applyFilters()"><option value="ALL">รวมทั้งหมด</option></select></div>
+            <div><label><b>⚖️ สถานะ:</b></label> <select id="balanceFilter" onchange="applyFilters()"><option value="ALL">ทั้งหมด</option><option value="SHORTAGE">🔴 ของขาด</option><option value="SURPLUS">🟢 ของเหลือ</option></select></div>
+        </div>
+
+        <div class="table-wrapper">
+            <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+        </div>
+    </div>
+
+    <!-- Modal Popup เจาะลึก WBS -->
+    <div id="drillModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><button onclick="goBackModal()" style="margin-right:10px;">⬅ ย้อนกลับ</button> <span id="modalTitle">รายละเอียด</span></h3>
+                <button class="close-btn" onclick="document.getElementById('drillModal').classList.remove('active')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-wrapper"><table class="modal-table"><thead id="modalThead"></thead><tbody id="modalBody"></tbody></table></div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let modalHistory = [], currentModalData = [], currentModalCols = [];
+
+    function init() {
+        const uniqueCat = [...new Set(mainData.map(i => i.Category))].sort();
+        uniqueCat.forEach(c => document.getElementById('categoryFilter').appendChild(new Option(c, c)));
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const cat = document.getElementById('categoryFilter').value, bal = document.getElementById('balanceFilter').value;
+        let fd = mainData;
+        if(cat !== 'ALL') fd = fd.filter(i => i.Category === cat);
+        if(bal === 'SHORTAGE') fd = fd.filter(i => i.Balance < 0); else if(bal === 'SURPLUS') fd = fd.filter(i => i.Balance >= 0);
+        
+        let head = `<tr><th>รหัสวัสดุ</th><th>ชื่ออุปกรณ์</th>`;
+        projectGroups.forEach(g => head += `<th>${g}</th>`);
+        document.getElementById('thead').innerHTML = head + `<th>รวมต้องการ</th><th class="col-stock">สต๊อก D060</th><th>ขาด/เกิน</th></tr>`;
+
+        let body = '';
+        fd.forEach(row => {
+            body += `<tr><td class="wbs-link" onclick="openMatView('${row['วัสดุ']}', '${row['คำอธิบายวัสดุ']}')">${row['วัสดุ']}</td><td title="${row['คำอธิบายวัสดุ']}">${row['คำอธิบายวัสดุ']}</td>`;
+            projectGroups.forEach(g => body += `<td>${row[g]||'-'}</td>`);
+            let bClass = row.Balance < 0 ? 'negative' : 'positive';
+            body += `<td style="text-align:right"><b>${row.Total_Demand}</b></td><td class="col-stock" style="text-align:right">${row.Stock}</td><td class="${bClass}">${row.Balance}</td></tr>`;
+        });
+        document.getElementById('tbody').innerHTML = body;
+    }
+
+    function openMatView(mat, desc, add=true) {
+        if(add) modalHistory.push({type:'MAT', code:mat, desc:desc});
+        const cols = [{key:'WBS', label:'WBS (คลิก)'}, {key:'Network', label:'โครงข่าย'}, {key:'Project_Name', label:'ชื่องาน'}, {key:'Qty', label:'ปริมาณ'}, {key:'Stock', label:'สต๊อก'}, {key:'PendingCount', label:'รายการรอเบิก'}, {key:'Status', label:'สถานะ'}];
+        renderModal(`WBS ที่ใช้: ${mat} (${desc})`, cols, wbsDataByMat[mat] || []);
+    }
+    function openWbsView(wbs, desc, add=true) {
+        if(add) modalHistory.push({type:'WBS', code:wbs, desc:desc});
+        const cols = [{key:'วัสดุ', label:'วัสดุ (คลิก)'}, {key:'MatDesc', label:'ชื่ออุปกรณ์'}, {key:'Qty', label:'ปริมาณ'}, {key:'Stock', label:'สต๊อก'}, {key:'Balance', label:'คงเหลือ'}, {key:'Status', label:'สถานะ'}];
+        renderModal(`อุปกรณ์ใน WBS: ${wbs} (${desc})`, cols, wbsDataByWbs[wbs] || []);
+    }
+
+    function renderModal(title, cols, data) {
+        document.getElementById('modalTitle').innerHTML = title; currentModalData = data; currentModalCols = cols;
+        let h = '<tr>'; cols.forEach(c => h+=`<th>${c.label}<input class="modal-filter-input" data-col="${c.key}" onkeyup="filterModal()" placeholder="🔍"></th>`);
+        document.getElementById('modalThead').innerHTML = h+'</tr>'; drawModalRows(data);
+        document.getElementById('drillModal').classList.add('active');
+    }
+
+    function filterModal() {
+        let filters = {};
+        document.querySelectorAll('.modal-filter-input').forEach(i => { if(i.value.trim()!=='') filters[i.getAttribute('data-col')] = i.value.trim().toLowerCase(); });
+        let fd = currentModalData.filter(row => {
+            for(let k in filters) {
+                let fv=filters[k], cv=String(row[k]).toLowerCase();
+                if(fv.startsWith('!=') || fv.startsWith('>')) { /* เช็คตรรกะแบบง่าย */ if(!eval(`${cv} ${fv}`)) return false; }
+                else if(!cv.includes(fv)) return false;
+            } return true;
+        }); drawModalRows(fd);
+    }
+
+    function drawModalRows(data) {
+        let h = '';
+        data.forEach(r => {
+            h += '<tr>';
+            currentModalCols.forEach(c => {
+                let v = r[c.key]||'-';
+                if(c.key==='WBS') h+=`<td class="wbs-link" onclick="openWbsView('${v}','${r.Project_Name}')">${v}</td>`;
+                else if(c.key==='วัสดุ') h+=`<td class="wbs-link" onclick="openMatView('${v}','${r.MatDesc}')">${v}</td>`;
+                else h+=`<td style="text-align:${typeof v==='number'?'right':'left'}">${v}</td>`;
+            }); h += '</tr>';
+        }); document.getElementById('modalBody').innerHTML = h;
+    }
+    function goBackModal() { if(modalHistory.length>1){ modalHistory.pop(); let p=modalHistory[modalHistory.length-1]; p.type==='MAT'?openMatView(p.code,p.desc,false):openWbsView(p.code,p.desc,false); } }
+    window.onload = init;
+</script>
+</body>
+</html>
