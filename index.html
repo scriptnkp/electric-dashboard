@@ -48,8 +48,8 @@
     let barChart = null;
 
     function init() {
-        // แสดงเวลาอัปเดต
-        document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'ยังไม่มีข้อมูล';
+        // ดึงเวลาจากไฟล์ data.js มาแสดง
+        document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
 
         const uniqueCat = [...new Set(mainData.map(i => i.Category))].sort();
         uniqueCat.forEach(c => document.getElementById('categoryFilter').appendChild(new Option(c, c)));
