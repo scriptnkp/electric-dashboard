@@ -1,6 +1,7 @@
 import pandas as pd
 import json
 import os
+import re
 from datetime import datetime, timezone, timedelta
 
 # 1. ตั้งค่าไฟล์
@@ -9,8 +10,9 @@ file_zmb25 = '11.zmb25.XLSX'
 file_cn43n = '14.CN43N.xlsx'
 file_me2n = '12.ME2N.xlsx'
 file_me2n1 = '13.ME2N1.xlsx'
+file_budget_c = 'C.txt' # <--- เพิ่มไฟล์งบเงิน
 
-print("กำลังอ่านไฟล์ Excel...")
+print("กำลังอ่านไฟล์ Excel และ Txt...")
 df_stock = pd.read_excel(file_mb52)
 df_demand = pd.read_excel(file_zmb25)
 df_proj = pd.read_excel(file_cn43n)
@@ -55,7 +57,7 @@ def get_short_status(x):
     elif len(parts) == 1: return parts[0]
     return ""
 
-# 3. จัดการ WBS
+# 3. จัดการ WBS และ Dashboard
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
 pie_summary = df_demand.groupby('Project_Group')['องค์ประกอบ WBS'].nunique().reset_index().rename(columns={'องค์ประกอบ WBS': 'WBS_Count'})
 
@@ -85,59 +87,32 @@ wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประก�
 wbs_details = pd.merge(wbs_details, wbs_pending, on='องค์ประกอบ WBS', how='left').fillna(0)
 wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'คำอธิบายวัสดุ', 'Stock', 'Balance']], on='วัสดุ', how='left').fillna('-')
 wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
-
-# แปลง Network ให้เป็นข้อความและตัดทศนิยมทิ้ง เพื่อไม่ให้มีลูกน้ำใน JS
 wbs_details['Network'] = wbs_details['Network'].fillna('-').astype(str).str.replace(r'\.0$', '', regex=True)
 
-# 4. จัดการ ME2N (D060 รับเข้า)
+# 4. จัดการ ME2N รับเข้าและจัดสรร
 df_me2n_in = df_me2n[df_me2n['โรงงาน'] == 'D060'].copy()
 df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
 df_me2n_in['ที่เก็บสินค้า'] = df_me2n_in['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
 df_me2n_in['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'] = df_me2n_in['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].fillna('-ไม่ระบุ-')
 df_me2n_in['ข้อความส่วนหัว'] = df_me2n_in['ข้อความส่วนหัว'].fillna('')
 df_me2n_in['Category'] = df_me2n_in['วัสดุ'].apply(get_category)
-
 me2n_active = df_me2n_in[df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
 me2n_summary = me2n_active.groupby(['วัสดุ', 'ข้อความสั้น', 'Category'])['ยังจะถูกส่งมอบ (ปริมาณ)'].sum().reset_index()
 me2n_details = me2n_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
 me2n_vendors = sorted([str(v) for v in me2n_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
 
-# =========================================================
-# 5. จัดการ ME2N (D060 ส่งออก/จัดสรรให้คลังอื่น)
-# =========================================================
 df_me2n_out = df_me2n[df_me2n['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].astype(str).str.contains('D060', na=False, case=False)].copy()
 df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
 df_me2n_out['ที่เก็บสินค้า'] = df_me2n_out['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
 df_me2n_out['ข้อความส่วนหัว'] = df_me2n_out['ข้อความส่วนหัว'].fillna('')
 df_me2n_out['Category'] = df_me2n_out['วัสดุ'].apply(get_category)
-
-plant_map = {
-    'D010': 'D010 คลังพัสดุ อุดรธานี',
-    'D020': 'D020 คลังพัสดุ หนองคาย',
-    'D030': 'D030 คลังพัสดุ หนองบัวลำภู',
-    'D040': 'D040 คลังพัสดุ เลย',
-    'D050': 'D050 คลังพัสดุ สกลนคร',
-    'D060': 'D060 คลังพัสดุ นครพนม',
-    'D070': 'D070 คลังพัสดุ บึงกาฬ',
-    'D090': 'D090 คลังพัสดุ หนองหาน',
-    'D100': 'D100 คลังพัสดุ พังโคน',
-    'D110': 'D110 คลังพัสดุ หนองบัวลำภู',
-    'D120': 'D120 คลังพัสดุ บ้านไผ่',
-    'D130': 'D130 คลังพัสดุ บึงกาฬ'
-}
-
-def get_plant_name(code):
-    code = str(code).strip()
-    if len(code) > 4: return code 
-    return plant_map.get(code, code) 
-
-df_me2n_out['โรงงาน'] = df_me2n_out['โรงงาน'].apply(get_plant_name).fillna('-ไม่ระบุ-')
-
+plant_map = {'D010': 'D010 คลังพัสดุ อุดรธานี', 'D020': 'D020 คลังพัสดุ หนองคาย', 'D030': 'D030 คลังพัสดุ หนองบัวลำภู', 'D040': 'D040 คลังพัสดุ เลย', 'D050': 'D050 คลังพัสดุ สกลนคร', 'D060': 'D060 คลังพัสดุ นครพนม', 'D070': 'D070 คลังพัสดุ บึงกาฬ', 'D090': 'D090 คลังพัสดุ หนองหาน', 'D100': 'D100 คลังพัสดุ พังโคน', 'D110': 'D110 คลังพัสดุ หนองบัวลำภู', 'D120': 'D120 คลังพัสดุ บ้านไผ่', 'D130': 'D130 คลังพัสดุ บึงกาฬ'}
+df_me2n_out['โรงงาน'] = df_me2n_out['โรงงาน'].apply(lambda x: plant_map.get(str(x).strip(), str(x).strip())).fillna('-ไม่ระบุ-')
 alloc_active = df_me2n_out[df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
 alloc_details = alloc_active[['เอกสารการจัดซื้อ', 'โรงงาน', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
 alloc_plants = sorted([str(v) for v in alloc_active['โรงงาน'].unique() if str(v) != '-ไม่ระบุ-'])
 
-# 6. จัดการ ME2N1 (แผนซื้อ กฟฉ.1 - กรอง DAN)
+# 5. จัดการ ME2N1 (แผนซื้อ กฟฉ.1 - กรอง DAN)
 try:
     df_me2n1 = pd.read_excel(file_me2n1)
     df_me2n1_dan = df_me2n1[df_me2n1['กลุ่มการจัดซื้อ'] == 'DAN'].copy()
@@ -146,16 +121,53 @@ try:
     df_me2n1_dan['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'] = df_me2n1_dan['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].fillna('-ไม่ระบุ-')
     df_me2n1_dan['ข้อความส่วนหัว'] = df_me2n1_dan['ข้อความส่วนหัว'].fillna('')
     df_me2n1_dan['Category'] = df_me2n1_dan['วัสดุ'].apply(get_category)
-    
-    df_me2n1_active = df_me2n1_dan[df_me2n1_dan['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
-    me2n1_details = df_me2n1_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
-    me2n1_vendors = sorted([str(v) for v in df_me2n1_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
+    me2n1_active = df_me2n1_dan[df_me2n1_dan['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
+    me2n1_details = me2n1_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
+    me2n1_vendors = sorted([str(v) for v in me2n1_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
 except Exception as e:
-    print(f"Warning: ME2N1 processing error: {e}")
+    print(f"Warning: ME2N1 error: {e}")
     me2n1_details = pd.DataFrame()
     me2n1_vendors = []
 
-# หาวันที่อัปเดต
+# ==========================================
+# 6. จัดการไฟล์งบเงิน (อ่านไฟล์ Text และดึงเฉพาะข้อมูลที่ต้องการ)
+# ==========================================
+budget_data = []
+try:
+    with open(file_budget_c, 'r', encoding='cp874') as f:
+        lines = f.readlines()
+        
+    for line in lines:
+        if line.startswith('|') and 'WBS' not in line and 'รายการ' not in line and 'รวม' not in line:
+            parts = line.split('|')
+            if len(parts) >= 14:
+                wbs = parts[3].strip()
+                if not wbs: continue
+                
+                # ดึงตัวเลข ลบลูกน้ำออก
+                def get_val(idx):
+                    try: return float(parts[idx].strip().replace(',', ''))
+                    except: return 0.0
+
+                col_remain_11 = get_val(14)
+                
+                # กรองเฉพาะ WBS ที่มีคำว่า AED หรือ NPN และมียอด 'ยังไม่ดำเนินการ' > 0
+                if col_remain_11 > 0 and ('AED' in wbs or 'NPN' in wbs):
+                    budget_data.append({
+                        'WBS': wbs,
+                        'Col3': get_val(6),   # วงเงินคงเหลือยกมา
+                        'Col4': get_val(7),   # จ่ายจริงสะสม
+                        'Col5': get_val(8),   # วงเงินคงเหลือ
+                        'Col6': get_val(9),   # IR
+                        'Col7': get_val(10),  # GR
+                        'Col8': get_val(11),  # วงเงินผูกพันใน SAP
+                        'Col9': get_val(12),  # PO
+                        'Col10': get_val(13), # PR
+                        'Col11': col_remain_11 # ยังไม่ดำเนินการ
+                    })
+except Exception as e:
+    print(f"Warning: อ่านไฟล์งบเงินล้มเหลว หรือไม่พบไฟล์ C.txt: {e}")
+
 tz_th = timezone(timedelta(hours=7))
 update_time = datetime.now(tz_th).strftime("%d/%m/%Y เวลา %H:%M น.")
 
@@ -174,6 +186,7 @@ const me2n1DetailsData = {json.dumps(me2n1_details.to_dict(orient='records'))};
 const me2n1Vendors = {json.dumps(me2n1_vendors)};
 const allocDetailsData = {json.dumps(alloc_details.to_dict(orient='records'))};
 const allocPlants = {json.dumps(alloc_plants)};
+const budgetData = {json.dumps(budget_data)};
 """
 
 with open('data.js', 'w', encoding='utf-8') as f: f.write(js_content)

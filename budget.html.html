@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>งบเงิน</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="data.js"></script>
+    <style>
+        .table-wrapper { max-height: 70vh; overflow-y: auto; overflow-x: auto; border: 1px solid #bdc3c7; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
+        th { background-color: #2c3e50; color: white; padding: 12px; text-align: center; position: sticky; top: 0; z-index: 2; font-size: 13px;}
+        td { border: 1px solid #ecf0f1; padding: 10px; font-size: 14px;}
+        tbody tr:nth-child(even) { background-color: #f9f9f9; }
+        tbody tr:hover { background-color: #e8f4f8; }
+        .num-col { text-align: right; }
+        
+        /* สรุปยอดรวมด้านล่าง */
+        tfoot th { background-color: #34495e; color: #f1c40f; text-align: right; font-size: 14px; position: sticky; bottom: 0; padding: 12px;}
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="index.html" class="nav-btn">📊 หน้ากราฟ</a>
+        <a href="demand.html" class="nav-btn">📋 ตารางความต้องการ</a>
+        <a href="me2n.html" class="nav-btn">📦 วัสดุรอนำเข้า (ME2N)</a>
+        <a href="plan1.html" class="nav-btn" style="background-color: #e84393; border-color: #e84393; font-weight:bold;">🛒 แผนซื้อ กฟฉ.1</a>
+        <a href="allocate.html" class="nav-btn" style="background-color: #63cdda; border-color: #63cdda; color:#2c3e50; font-weight:bold;">🚚 จัดสรรให้คลังต่างๆ</a>
+        <a href="budget.html" class="nav-btn active-btn" style="background-color: #f39c12; border-color: #f39c12; color:white; font-weight:bold;">💰 งบเงิน</a>
+        <div style="margin-left: auto; align-self: center; font-size: 14px; color: #ecf0f1;">
+            🕒 อัปเดตล่าสุด: <span id="lastUpdatedText" style="color: #f1c40f; font-weight: bold;"></span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+            <h2 style="margin: 0;">💰 รายงานวงเงินงบประมาณ (เฉพาะ AED และ NPN ที่มีงบคงเหลือ)</h2>
+        </div>
+
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align: left;">WBS</th>
+                        <th>วงเงินคงเหลือยกมา<br>(3)</th>
+                        <th>จ่ายจริงสะสม<br>(4)</th>
+                        <th>วงเงินคงเหลือ<br>(5)=(3)-(4)</th>
+                        <th>IR<br>(6)</th>
+                        <th>GR<br>(7)</th>
+                        <th>วงเงินผูกพันใน SAP<br>(8)</th>
+                        <th>PO<br>(9)</th>
+                        <th>PR<br>(10)</th>
+                        <th style="background-color: #e74c3c;">ยังไม่ดำเนินการ<br>(11)</th>
+                    </tr>
+                </thead>
+                <tbody id="budgetBody"></tbody>
+                <tfoot>
+                    <tr>
+                        <th style="text-align: center;">รวมทั้งสิ้น</th>
+                        <th id="sum3">0.00</th>
+                        <th id="sum4">0.00</th>
+                        <th id="sum5">0.00</th>
+                        <th id="sum6">0.00</th>
+                        <th id="sum7">0.00</th>
+                        <th id="sum8">0.00</th>
+                        <th id="sum9">0.00</th>
+                        <th id="sum10">0.00</th>
+                        <th id="sum11" style="color: #ffffff; background-color:#c0392b;">0.00</th>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+
+<script>
+    function init() {
+        document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
+        
+        if (typeof budgetData === 'undefined' || budgetData.length === 0) {
+            document.getElementById('budgetBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:red; padding: 20px;">ไม่พบข้อมูล หรือกำลังรอ GitHub ประมวลผล...</td></tr>';
+            return;
+        }
+
+        let h = '';
+        let sums = { 3:0, 4:0, 5:0, 6:0, 7:0, 8:0, 9:0, 10:0, 11:0 };
+
+        budgetData.forEach(r => {
+            // บวกยอดรวม
+            sums[3] += r.Col3; sums[4] += r.Col4; sums[5] += r.Col5;
+            sums[6] += r.Col6; sums[7] += r.Col7; sums[8] += r.Col8;
+            sums[9] += r.Col9; sums[10] += r.Col10; sums[11] += r.Col11;
+
+            h += `<tr>
+                <td><b>${r.WBS}</b></td>
+                <td class="num-col">${r.Col3.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="num-col">${r.Col4.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="num-col" style="color:#2980b9; font-weight:bold;">${r.Col5.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="num-col">${r.Col6.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="num-col">${r.Col7.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="num-col">${r.Col8.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="num-col">${r.Col9.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="num-col">${r.Col10.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+                <td class="num-col" style="color:#e74c3c; font-weight:bold;">${r.Col11.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</td>
+            </tr>`;
+        });
+
+        document.getElementById('budgetBody').innerHTML = h;
+
+        // อัปเดตยอดรวมด้านล่าง
+        for(let i=3; i<=11; i++) {
+            document.getElementById(`sum${i}`).innerText = sums[i].toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+    }
+
+    window.onload = init;
+</script>
+</body>
+</html>
