@@ -25,12 +25,29 @@
                 <div><label><b>🔍 ประเภท:</b></label> <select id="categoryFilter" onchange="applyFilters()"><option value="ALL">รวมทั้งหมด</option></select></div>
                 <div><label><b>🏭 ผู้ขาย/โรงงาน:</b></label> <select id="vendorFilter" onchange="applyFilters()"><option value="ALL">รวมทั้งหมด</option></select></div>
             </div>
-            
-            <!-- ป้ายชื่อมุมขวาบน -->
             <div class="header-badge bg-pink">แผนจัดซื้อ กฟฉ.1 (DAN)</div>
         </div>
 
-        <div class="table-wrapper" style="margin-top: 20px; max-height: 650px;">
+        <!-- เพิ่มตารางสรุป -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 20px;">
+            <h2>1. สรุปแผนจัดซื้อ (คลิกรหัสวัสดุเพื่อกรอง)</h2>
+            <button onclick="selectedMat=null; applyFilters()" style="padding: 5px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">ล้างการเลือกวัสดุ</button>
+        </div>
+        <div class="table-wrapper" style="max-height: 300px;">
+            <table>
+                <thead style="background-color: #2c3e50;">
+                    <tr>
+                        <th style="color:white;">รหัสวัสดุ (คลิกเพื่อกรอง)</th>
+                        <th style="color:white;">ชื่ออุปกรณ์</th>
+                        <th style="color:white; text-align:right">ยอดรวม</th>
+                    </tr>
+                </thead>
+                <tbody id="sumBody"></tbody>
+            </table>
+        </div>
+
+        <h2>2. รายละเอียดเอกสารการจัดซื้อ (PO)</h2>
+        <div class="table-wrapper" style="max-height: 500px;">
             <table>
                 <thead style="background-color: #2c3e50;">
                     <tr>
@@ -49,6 +66,8 @@
     </div>
 
 <script>
+    let selectedMat = null; // ตัวแปรเก็บค่าการคลิก
+
     function init() {
         document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
         
@@ -72,6 +91,26 @@
         let fd = me2n1DetailsData;
         if(cat !== 'ALL') fd = fd.filter(i => i.Category === cat);
         if(ven !== 'ALL') fd = fd.filter(i => i['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'] === ven);
+
+        // 1. คำนวณสรุปตารางบน
+        let newSum = {};
+        fd.forEach(i => {
+            if(!newSum[i['วัสดุ']]) newSum[i['วัสดุ']] = { mat: i['วัสดุ'], desc: i['ข้อความสั้น'], qty: 0 };
+            newSum[i['วัสดุ']].qty += i['ยังจะถูกส่งมอบ (ปริมาณ)'];
+        });
+
+        let hSum = '';
+        Object.values(newSum).forEach(r => {
+            hSum += `<tr style="cursor:pointer; background:${selectedMat===r.mat?'#d5f5e3':''}" onclick="selectedMat='${r.mat}'; applyFilters();">
+                <td class="wbs-link"><b>${r.mat}</b></td>
+                <td>${r.desc}</td>
+                <td style="text-align:right; color:#27ae60"><b>${r.qty.toLocaleString()}</b></td>
+            </tr>`;
+        });
+        document.getElementById('sumBody').innerHTML = hSum;
+
+        // 2. กรองข้อมูลตารางล่าง ถ้ามีการคลิกเลือกวัสดุจากตารางบน
+        if(selectedMat) fd = fd.filter(i => i['วัสดุ'] === selectedMat);
 
         let hDet = '', idx = 1;
         if(fd.length === 0) {
