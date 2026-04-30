@@ -66,7 +66,7 @@
         if (w.startsWith('I-68')) return 'ลงทุน 68';
         if (w.startsWith('I-69')) return 'ลงทุน 69';
         if (w.startsWith('P-NHE03')) return 'คฟม';
-        if (w.startsWith('P-SEZ02')) return 'คพพ';
+        if (w.startsWith('P-SEZ02')) return 'คพพ'; 
         if (w.startsWith('P-TDD01')) return 'คพจ1';
         if (w.startsWith('P-TDD02')) return 'คพจ2';
         return 'อื่นๆ';
@@ -109,23 +109,35 @@
     function openMatGroupView(mat, desc, group, add=true) { 
         if(add) modalHistory.push({type:'MAT_GROUP', code:mat, desc:desc, group:group}); 
         const cols = [{key:'WBS', label:'WBS (คลิก)'}, {key:'Network', label:'โครงข่าย'}, {key:'Project_Name', label:'ชื่องาน'}, {key:'Qty', label:'ปริมาณ'}, {key:'PendingCount', label:'คงเหลือ (รายการ)'}, {key:'Status', label:'สถานะ'}, {key:'Applicant', label:'ผู้ควบคุม'}]; 
+        
         let allData = wbsDataByMat[mat] || [];
-        let filteredData = allData.filter(r => getProjectGroup(r.WBS) === group);
-        renderModal(`รายการ WBS <span style="color:#3498db; background:white; padding:2px 8px; border-radius:12px;">งบ: ${group}</span> ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวม <b>${filteredData.length}</b> งาน)</span>`, cols, filteredData); 
+        let groupData = allData.filter(r => getProjectGroup(r.WBS) === group);
+        let filteredData = groupData.filter(r => r.Qty !== 0);
+        
+        // [อัปเดต] เปลี่ยนข้อความเป็น "รวมทั้งหมด X งาน คงเหลือ Y งาน"
+        renderModal(`รายการ WBS <span style="color:#3498db; background:white; padding:2px 8px; border-radius:12px;">งบ: ${group}</span> ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวมทั้งหมด <b>${groupData.length}</b> งาน คงเหลือ <b>${filteredData.length}</b> งาน)</span>`, cols, filteredData); 
     }
 
     function openMatView(mat, desc, add=true) { 
         if(add) modalHistory.push({type:'MAT', code:mat, desc:desc}); 
         const cols = [{key:'WBS', label:'WBS (คลิก)'}, {key:'Network', label:'โครงข่าย'}, {key:'Project_Name', label:'ชื่องาน'}, {key:'Qty', label:'ปริมาณ'}, {key:'PendingCount', label:'คงเหลือ (รายการ)'}, {key:'Status', label:'สถานะ'}, {key:'Applicant', label:'ผู้ควบคุม'}]; 
+        
         let allData = wbsDataByMat[mat] || [];
-        renderModal(`รายการ WBS รวมทุกงบ ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวม <b>${allData.length}</b> งาน)</span>`, cols, allData); 
+        let filteredData = allData.filter(r => r.Qty !== 0);
+        
+        // [อัปเดต] เปลี่ยนข้อความเป็น "รวมทั้งหมด X งาน คงเหลือ Y งาน"
+        renderModal(`รายการ WBS รวมทุกงบ ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวมทั้งหมด <b>${allData.length}</b> งาน คงเหลือ <b>${filteredData.length}</b> งาน)</span>`, cols, filteredData); 
     }
 
     function openWbsView(wbs, desc, add=true) { 
         if(add) modalHistory.push({type:'WBS', code:wbs, desc:desc}); 
         const cols = [{key:'วัสดุ', label:'วัสดุ (คลิก)'}, {key:'MatDesc', label:'ชื่ออุปกรณ์'}, {key:'Network', label:'โครงข่าย'}, {key:'Qty', label:'ปริมาณ'}, {key:'Stock', label:'สต๊อก'}, {key:'Balance', label:'คงเหลือ'}, {key:'Status', label:'สถานะ'}, {key:'Applicant', label:'ผู้ควบคุม'}]; 
+        
         let allData = wbsDataByWbs[wbs] || [];
-        renderModal(`อุปกรณ์ใน WBS: <span style="color:#f1c40f;">${wbs}</span> (${desc}) <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวม <b>${allData.length}</b> รายการ)</span>`, cols, allData); 
+        let filteredData = allData.filter(r => r.Qty !== 0);
+        
+        // [อัปเดต] เปลี่ยนข้อความเป็น "รวมทั้งหมด X รายการ คงเหลือ Y รายการ"
+        renderModal(`อุปกรณ์ใน WBS: <span style="color:#f1c40f;">${wbs}</span> (${desc}) <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวมทั้งหมด <b>${allData.length}</b> รายการ คงเหลือ <b>${filteredData.length}</b> รายการ)</span>`, cols, filteredData); 
     }
 
     function renderModal(title, cols, data) { 
@@ -133,7 +145,6 @@
         currentModalData = data; currentModalCols = cols; 
         let h = '<tr>'; 
         cols.forEach(c => {
-            // [อัปเดต] เปลี่ยนช่องค้นหาให้กลับมาเป็นแบบพิมพ์ค้นหาทั้งหมด
             h += `<th>${c.label}<br><input class="modal-filter-input" data-col="${c.key}" onkeyup="filterModal()" placeholder="🔍 กรอง"></th>`;
         }); 
         document.getElementById('modalThead').innerHTML = h+'</tr>'; 
@@ -162,11 +173,14 @@
         data.forEach(r => { 
             h += '<tr>'; 
             currentModalCols.forEach(c => { 
-                let v = r[c.key]||'-'; 
+                let v = r[c.key];
+                if(v === 0) v = 0;
+                else if(!v) v = '-';
+
                 if(c.key==='WBS') h+=`<td class="wbs-link" onclick="openWbsView('${v}','${r.Project_Name}')">${v}</td>`; 
                 else if(c.key==='วัสดุ') h+=`<td class="wbs-link" onclick="openMatView('${v}','${r.MatDesc}')">${v}</td>`; 
                 else if(c.key==='PendingCount' && v !== '-') h+=`<td style="text-align:center; color:#e74c3c; font-weight:bold;">${v}</td>`;
-                else if(c.key==='Network') h+=`<td style="text-align:center">${v}</td>`; // [อัปเดต] โชว์ตัวเลขโครงข่ายแบบข้อความธรรมดา (ไม่มีลูกน้ำ)
+                else if(c.key==='Network') h+=`<td style="text-align:center">${v}</td>`;
                 else h+=`<td style="text-align:${typeof v==='number'?'right':'left'}">${typeof v==='number'?v.toLocaleString():v}</td>`; 
             }); 
             h += '</tr>'; 
