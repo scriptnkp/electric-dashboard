@@ -68,7 +68,9 @@ final_df['Category'] = final_df['วัสดุ'].apply(get_category)
 for col in project_cols:
     if col not in final_df.columns: final_df[col] = 0
 
-df_proj['Status_Short'] = df_proj['สถานะ'].apply(lambda x: str(x).split('//')[-1].strip() if pd.notna(x) else "")
+# [อัปเดตแก้ไข] ให้แสดงข้อความ "สถานะ" แบบเต็มๆ ไม่ตัดคำทิ้งแล้วครับ!
+df_proj['Status_Short'] = df_proj['สถานะ'].apply(lambda x: str(x).strip() if pd.notna(x) else "")
+
 wbs_pending = df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount')
 wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง']], df_proj[['องค์ประกอบ WBS', 'ชื่อ', 'Status_Short', 'ผู้สมัคร']], on='องค์ประกอบ WBS', how='left')
 wbs_details = pd.merge(wbs_details, wbs_pending, on='องค์ประกอบ WBS', how='left').fillna(0)
