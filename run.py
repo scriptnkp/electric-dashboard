@@ -12,7 +12,8 @@ file_me2n = '12.ME2N.xlsx'
 file_me2n1 = '13.ME2N1.xlsx'
 file_budget_c = 'C.txt' 
 file_budget_i = 'I.txt'
-file_budget_p = 'P.txt' # <--- เพิ่มไฟล์งบ P.txt
+file_budget_p = 'P.txt'
+file_budget_n = 'N.txt' # <--- เพิ่มไฟล์ N.txt
 
 print("กำลังอ่านไฟล์ Excel และ Txt...")
 df_stock = pd.read_excel(file_mb52)
@@ -114,7 +115,6 @@ alloc_active = df_me2n_out[df_me2n_out['ยังจะถูกส่งมอ�
 alloc_details = alloc_active[['เอกสารการจัดซื้อ', 'โรงงาน', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
 alloc_plants = sorted([str(v) for v in alloc_active['โรงงาน'].unique() if str(v) != '-ไม่ระบุ-'])
 
-# 5. จัดการ ME2N1 (แผนซื้อ กฟฉ.1 - กรอง DAN)
 try:
     df_me2n1 = pd.read_excel(file_me2n1)
     df_me2n1_dan = df_me2n1[df_me2n1['กลุ่มการจัดซื้อ'] == 'DAN'].copy()
@@ -127,12 +127,35 @@ try:
     me2n1_details = me2n1_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
     me2n1_vendors = sorted([str(v) for v in me2n1_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
 except Exception as e:
-    print(f"Warning: ME2N1 error: {e}")
     me2n1_details = pd.DataFrame()
     me2n1_vendors = []
 
 # ==========================================
-# 6. จัดการไฟล์งบเงิน (อ่าน C.txt, I.txt, P.txt)
+# 6. อ่านไฟล์ N.txt เพื่อเก็บชื่อ WBS
+# ==========================================
+wbs_names_map = {}
+try:
+    with open(file_budget_n, 'r', encoding='utf-8') as f: # ลองอ่านด้วย utf-8 ก่อน
+        lines = f.readlines()
+except:
+    try:
+        with open(file_budget_n, 'r', encoding='cp874') as f: # ถ้าไม่ได้ ให้อ่านด้วย cp874
+            lines = f.readlines()
+    except Exception as e:
+        print(f"Warning: อ่านไฟล์ N.txt ไม่ได้ ({e})")
+        lines = []
+
+for line in lines:
+    if line.startswith('|') and 'องค์ประกอบ WBS' not in line:
+        parts = line.split('|')
+        if len(parts) > 3:
+            w = parts[2].strip()
+            name = parts[3].strip()
+            if w and name:
+                wbs_names_map[w] = name
+
+# ==========================================
+# 7. จัดการไฟล์งบเงิน (C.txt, I.txt, P.txt)
 # ==========================================
 budget_data = []
 
@@ -154,9 +177,6 @@ def process_budget_file(file_path, file_type):
 
                     col_remain_11 = get_val(14)
                     
-                    # [อัปเดตเงื่อนไขตามที่แจ้ง]
-                    # NPN แสดงเสมอ (จากทุกไฟล์ C, I, P)
-                    # AED และ POP แสดงเฉพาะถ้ามาจากงบ C (file_type == 'C')
                     show = False
                     if 'NPN' in wbs:
                         show = True
@@ -166,6 +186,7 @@ def process_budget_file(file_path, file_type):
                     if col_remain_11 > 0 and show:
                         budget_data.append({
                             'WBS': wbs,
+                            'Project_Name': wbs_names_map.get(wbs, '-'), # ดึงชื่อจาก N.txt มาใส่
                             'Col3': get_val(6),   
                             'Col4': get_val(7),   
                             'Col5': get_val(8),   
@@ -177,9 +198,8 @@ def process_budget_file(file_path, file_type):
                             'Col11': col_remain_11 
                         })
     except Exception as e:
-        print(f"Warning: ข้ามการอ่านไฟล์งบเงิน {file_path} ({e})")
+        pass
 
-# ระบุประเภทไฟล์ตอนเรียกใช้งาน ('C', 'I', 'P')
 process_budget_file(file_budget_c, 'C')
 process_budget_file(file_budget_i, 'I')
 process_budget_file(file_budget_p, 'P')
