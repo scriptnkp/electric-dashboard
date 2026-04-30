@@ -10,7 +10,8 @@ file_zmb25 = '11.zmb25.XLSX'
 file_cn43n = '14.CN43N.xlsx'
 file_me2n = '12.ME2N.xlsx'
 file_me2n1 = '13.ME2N1.xlsx'
-file_budget_c = 'C.txt' # <--- เพิ่มไฟล์งบเงิน
+file_budget_c = 'C.txt' 
+file_budget_i = 'I.txt' # <--- เพิ่มไฟล์งบลงทุน I.txt เข้ามา
 
 print("กำลังอ่านไฟล์ Excel และ Txt...")
 df_stock = pd.read_excel(file_mb52)
@@ -130,43 +131,48 @@ except Exception as e:
     me2n1_vendors = []
 
 # ==========================================
-# 6. จัดการไฟล์งบเงิน (อ่านไฟล์ Text และดึงเฉพาะข้อมูลที่ต้องการ)
+# 6. จัดการไฟล์งบเงิน (อ่านทั้ง C.txt และ I.txt)
 # ==========================================
 budget_data = []
-try:
-    with open(file_budget_c, 'r', encoding='cp874') as f:
-        lines = f.readlines()
-        
-    for line in lines:
-        if line.startswith('|') and 'WBS' not in line and 'รายการ' not in line and 'รวม' not in line:
-            parts = line.split('|')
-            if len(parts) >= 14:
-                wbs = parts[3].strip()
-                if not wbs: continue
-                
-                # ดึงตัวเลข ลบลูกน้ำออก
-                def get_val(idx):
-                    try: return float(parts[idx].strip().replace(',', ''))
-                    except: return 0.0
 
-                col_remain_11 = get_val(14)
-                
-                # กรองเฉพาะ WBS ที่มีคำว่า AED หรือ NPN และมียอด 'ยังไม่ดำเนินการ' > 0
-                if col_remain_11 > 0 and ('AED' in wbs or 'NPN' in wbs):
-                    budget_data.append({
-                        'WBS': wbs,
-                        'Col3': get_val(6),   # วงเงินคงเหลือยกมา
-                        'Col4': get_val(7),   # จ่ายจริงสะสม
-                        'Col5': get_val(8),   # วงเงินคงเหลือ
-                        'Col6': get_val(9),   # IR
-                        'Col7': get_val(10),  # GR
-                        'Col8': get_val(11),  # วงเงินผูกพันใน SAP
-                        'Col9': get_val(12),  # PO
-                        'Col10': get_val(13), # PR
-                        'Col11': col_remain_11 # ยังไม่ดำเนินการ
-                    })
-except Exception as e:
-    print(f"Warning: อ่านไฟล์งบเงินล้มเหลว หรือไม่พบไฟล์ C.txt: {e}")
+def process_budget_file(file_path):
+    try:
+        with open(file_path, 'r', encoding='cp874') as f:
+            lines = f.readlines()
+            
+        for line in lines:
+            if line.startswith('|') and 'WBS' not in line and 'รายการ' not in line and 'รวม' not in line:
+                parts = line.split('|')
+                if len(parts) >= 14:
+                    wbs = parts[3].strip()
+                    if not wbs: continue
+                    
+                    def get_val(idx):
+                        try: return float(parts[idx].strip().replace(',', ''))
+                        except: return 0.0
+
+                    col_remain_11 = get_val(14)
+                    
+                    # [อัปเดต] กรอง AED, NPN และเพิ่ม POP
+                    if col_remain_11 > 0 and ('AED' in wbs or 'NPN' in wbs or 'POP' in wbs):
+                        budget_data.append({
+                            'WBS': wbs,
+                            'Col3': get_val(6),   
+                            'Col4': get_val(7),   
+                            'Col5': get_val(8),   
+                            'Col6': get_val(9),   
+                            'Col7': get_val(10),  
+                            'Col8': get_val(11),  
+                            'Col9': get_val(12),  
+                            'Col10': get_val(13), 
+                            'Col11': col_remain_11 
+                        })
+    except Exception as e:
+        print(f"Warning: ข้ามการอ่านไฟล์งบเงิน {file_path} ({e})")
+
+# เรียกฟังก์ชันให้อ่านทั้งสองไฟล์
+process_budget_file(file_budget_c)
+process_budget_file(file_budget_i)
 
 tz_th = timezone(timedelta(hours=7))
 update_time = datetime.now(tz_th).strftime("%d/%m/%Y เวลา %H:%M น.")
