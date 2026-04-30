@@ -11,7 +11,7 @@ file_cn43n = '14.CN43N.xlsx'
 file_me2n = '12.ME2N.xlsx'
 file_me2n1 = '13.ME2N1.xlsx'
 file_budget_c = 'C.txt' 
-file_budget_i = 'I.txt' # <--- เพิ่มไฟล์งบลงทุน I.txt เข้ามา
+file_budget_i = 'I.txt'
 
 print("กำลังอ่านไฟล์ Excel และ Txt...")
 df_stock = pd.read_excel(file_mb52)
@@ -131,11 +131,12 @@ except Exception as e:
     me2n1_vendors = []
 
 # ==========================================
-# 6. จัดการไฟล์งบเงิน (อ่านทั้ง C.txt และ I.txt)
+# 6. จัดการไฟล์งบเงิน (อ่านทั้ง C.txt และ I.txt พร้อมเงื่อนไขใหม่)
 # ==========================================
 budget_data = []
 
-def process_budget_file(file_path):
+# เพิ่มพารามิเตอร์ is_c_budget เพื่อเช็คว่าเป็นไฟล์งบ C หรือไม่
+def process_budget_file(file_path, is_c_budget):
     try:
         with open(file_path, 'r', encoding='cp874') as f:
             lines = f.readlines()
@@ -153,8 +154,16 @@ def process_budget_file(file_path):
 
                     col_remain_11 = get_val(14)
                     
-                    # [อัปเดต] กรอง AED, NPN และเพิ่ม POP
-                    if col_remain_11 > 0 and ('AED' in wbs or 'NPN' in wbs or 'POP' in wbs):
+                    # [อัปเดตเงื่อนไข]
+                    # - NPN แสดงเสมอไม่ว่าจะไฟล์ไหน
+                    # - AED และ POP แสดงเฉพาะถ้ามาจากไฟล์ C.txt
+                    show = False
+                    if 'NPN' in wbs:
+                        show = True
+                    elif ('AED' in wbs or 'POP' in wbs) and is_c_budget:
+                        show = True
+                    
+                    if col_remain_11 > 0 and show:
                         budget_data.append({
                             'WBS': wbs,
                             'Col3': get_val(6),   
@@ -170,9 +179,9 @@ def process_budget_file(file_path):
     except Exception as e:
         print(f"Warning: ข้ามการอ่านไฟล์งบเงิน {file_path} ({e})")
 
-# เรียกฟังก์ชันให้อ่านทั้งสองไฟล์
-process_budget_file(file_budget_c)
-process_budget_file(file_budget_i)
+# เรียกฟังก์ชันให้อ่านทั้งสองไฟล์ โดยส่งสถานะ is_c_budget กำกับไปด้วย
+process_budget_file(file_budget_c, is_c_budget=True)
+process_budget_file(file_budget_i, is_c_budget=False)
 
 tz_th = timezone(timedelta(hours=7))
 update_time = datetime.now(tz_th).strftime("%d/%m/%Y เวลา %H:%M น.")
