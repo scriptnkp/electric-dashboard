@@ -114,8 +114,7 @@
         let groupData = allData.filter(r => getProjectGroup(r.WBS) === group);
         let filteredData = groupData.filter(r => r.Qty !== 0);
         
-        // [อัปเดต] เปลี่ยนข้อความเป็น "รวมทั้งหมด X งาน คงเหลือ Y งาน"
-        renderModal(`รายการ WBS <span style="color:#3498db; background:white; padding:2px 8px; border-radius:12px;">งบ: ${group}</span> ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวมทั้งหมด <b>${groupData.length}</b> งาน คงเหลือ <b>${filteredData.length}</b> งาน)</span>`, cols, filteredData); 
+        renderModal(`รายการ WBS <span style="color:#3498db; background:white; padding:2px 8px; border-radius:12px;">งบ: ${group}</span> ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> ${desc} <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(คงเหลือ <b>${filteredData.length}</b> งาน)</span>`, cols, filteredData); 
     }
 
     function openMatView(mat, desc, add=true) { 
@@ -125,8 +124,7 @@
         let allData = wbsDataByMat[mat] || [];
         let filteredData = allData.filter(r => r.Qty !== 0);
         
-        // [อัปเดต] เปลี่ยนข้อความเป็น "รวมทั้งหมด X งาน คงเหลือ Y งาน"
-        renderModal(`รายการ WBS รวมทุกงบ ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวมทั้งหมด <b>${allData.length}</b> งาน คงเหลือ <b>${filteredData.length}</b> งาน)</span>`, cols, filteredData); 
+        renderModal(`รายการ WBS รวมทุกงบ ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> ${desc} <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(คงเหลือ <b>${filteredData.length}</b> งาน)</span>`, cols, filteredData); 
     }
 
     function openWbsView(wbs, desc, add=true) { 
@@ -135,9 +133,12 @@
         
         let allData = wbsDataByWbs[wbs] || [];
         let filteredData = allData.filter(r => r.Qty !== 0);
+
+        // ดึงเลขโครงข่ายมารวมกัน (ถ้ามีหลายโครงข่ายใน WBS เดียวก็จะโชว์คั่นด้วยลูกน้ำให้)
+        let nets = [...new Set(allData.map(r => r.Network).filter(n => n && n !== '-'))].join(', ');
+        let netHtml = nets ? ` โครงข่าย <span style="color:#2ecc71;">${nets}</span>` : '';
         
-        // [อัปเดต] เปลี่ยนข้อความเป็น "รวมทั้งหมด X รายการ คงเหลือ Y รายการ"
-        renderModal(`อุปกรณ์ใน WBS: <span style="color:#f1c40f;">${wbs}</span> (${desc}) <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวมทั้งหมด <b>${allData.length}</b> รายการ คงเหลือ <b>${filteredData.length}</b> รายการ)</span>`, cols, filteredData); 
+        renderModal(`อุปกรณ์ใน WBS: <span style="color:#f1c40f;">${wbs}</span> (${desc})${netHtml} <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(<b>${allData.length}</b> รายการ คงเหลือ <b>${filteredData.length}</b> รายการ)</span>`, cols, filteredData); 
     }
 
     function renderModal(title, cols, data) { 
