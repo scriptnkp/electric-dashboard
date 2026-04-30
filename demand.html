@@ -6,11 +6,9 @@
     <link rel="stylesheet" href="style.css">
     <script src="data.js"></script>
     <style>
-        /* จัดตารางให้ยืดหยุ่นและตรึงคอลัมน์ซ้ายสุด (Sticky Columns) */
         #pivotTable { table-layout: auto; width: 100%; }
         #pivotTable th:nth-child(1), #pivotTable td:nth-child(1) { position: sticky; left: 0; z-index: 1; }
         #pivotTable th:nth-child(2), #pivotTable td:nth-child(2) { position: sticky; left: 120px; z-index: 1; border-right: 2px solid #bdc3c7; max-width: 250px; overflow: hidden; text-overflow: ellipsis; }
-        
         #pivotTable th:nth-child(1), #pivotTable th:nth-child(2) { z-index: 3; background-color: #2c3e50; color: white; }
         #pivotTable td:nth-child(1), #pivotTable td:nth-child(2) { background-color: #ecf0f1; color: #2c3e50; font-weight: bold; }
         #pivotTable tbody tr:hover td { background-color: #e8f4f8 !important; }
@@ -68,7 +66,7 @@
         if (w.startsWith('I-68')) return 'ลงทุน 68';
         if (w.startsWith('I-69')) return 'ลงทุน 69';
         if (w.startsWith('P-NHE03')) return 'คฟม';
-        if (w.startsWith('P-SEZ02')) return 'คพพ'; // <--- เปลี่ยน คขก เป็น คพพ
+        if (w.startsWith('P-SEZ02')) return 'คพพ';
         if (w.startsWith('P-TDD01')) return 'คพจ1';
         if (w.startsWith('P-TDD02')) return 'คพจ2';
         return 'อื่นๆ';
@@ -135,14 +133,8 @@
         currentModalData = data; currentModalCols = cols; 
         let h = '<tr>'; 
         cols.forEach(c => {
-            // [อัปเดต] เปลี่ยนช่องค้นหา WBS เป็น Dropdown
-            if(c.key === 'WBS') {
-                let options = '<option value="">🔍 ทุกงบ (รวมทั้งหมด)</option>';
-                projectGroups.forEach(g => { options += `<option value="GRP:${g}">${g}</option>`; });
-                h += `<th>${c.label}<br><select class="modal-filter-input" data-col="${c.key}" onchange="filterModal()">${options}</select></th>`;
-            } else {
-                h += `<th>${c.label}<br><input class="modal-filter-input" data-col="${c.key}" onkeyup="filterModal()" placeholder="🔍 กรอง"></th>`;
-            }
+            // [อัปเดต] เปลี่ยนช่องค้นหาให้กลับมาเป็นแบบพิมพ์ค้นหาทั้งหมด
+            h += `<th>${c.label}<br><input class="modal-filter-input" data-col="${c.key}" onkeyup="filterModal()" placeholder="🔍 กรอง"></th>`;
         }); 
         document.getElementById('modalThead').innerHTML = h+'</tr>'; 
         drawModalRows(data); 
@@ -152,21 +144,14 @@
     function filterModal() { 
         let filters = {}; 
         document.querySelectorAll('.modal-filter-input').forEach(i => { 
-            if(i.value.trim()!=='') filters[i.getAttribute('data-col')] = i.value.trim(); 
+            if(i.value.trim()!=='') filters[i.getAttribute('data-col')] = i.value.trim().toLowerCase(); 
         }); 
         let fd = currentModalData.filter(row => { 
             for(let k in filters) { 
                 let fv = filters[k];
-                // [อัปเดต] เช็คถ้ากรองจาก Dropdown (งบ)
-                if(k === 'WBS' && fv.startsWith('GRP:')) {
-                    let targetGroup = fv.substring(4);
-                    if(getProjectGroup(row[k]) !== targetGroup) return false;
-                } else {
-                    fv = fv.toLowerCase();
-                    let cv = String(row[k]).toLowerCase(); 
-                    if(fv.startsWith('!=') || fv.startsWith('>')) { if(!eval(`${cv} ${fv}`)) return false; } 
-                    else if(!cv.includes(fv)) return false; 
-                }
+                let cv = String(row[k]).toLowerCase(); 
+                if(fv.startsWith('!=') || fv.startsWith('>')) { if(!eval(`${cv} ${fv}`)) return false; } 
+                else if(!cv.includes(fv)) return false; 
             } return true; 
         }); 
         drawModalRows(fd); 
@@ -181,6 +166,7 @@
                 if(c.key==='WBS') h+=`<td class="wbs-link" onclick="openWbsView('${v}','${r.Project_Name}')">${v}</td>`; 
                 else if(c.key==='วัสดุ') h+=`<td class="wbs-link" onclick="openMatView('${v}','${r.MatDesc}')">${v}</td>`; 
                 else if(c.key==='PendingCount' && v !== '-') h+=`<td style="text-align:center; color:#e74c3c; font-weight:bold;">${v}</td>`;
+                else if(c.key==='Network') h+=`<td style="text-align:center">${v}</td>`; // [อัปเดต] โชว์ตัวเลขโครงข่ายแบบข้อความธรรมดา (ไม่มีลูกน้ำ)
                 else h+=`<td style="text-align:${typeof v==='number'?'right':'left'}">${typeof v==='number'?v.toLocaleString():v}</td>`; 
             }); 
             h += '</tr>'; 

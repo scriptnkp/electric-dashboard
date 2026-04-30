@@ -40,12 +40,11 @@ def get_project_group(wbs):
     elif wbs.startswith('I-68'): return 'ลงทุน 68'
     elif wbs.startswith('I-69'): return 'ลงทุน 69'
     elif wbs.startswith('P-NHE03'): return 'คฟม'
-    elif wbs.startswith('P-SEZ02'): return 'คพพ' # <--- แก้ไขตรงนี้เป็น คพพ
+    elif wbs.startswith('P-SEZ02'): return 'คพพ' 
     elif wbs.startswith('P-TDD01'): return 'คพจ1'
     elif wbs.startswith('P-TDD02'): return 'คพจ2'
     return 'อื่นๆ'
 
-# ฟังก์ชันดึงสถานะ (เอาแค่คำหน้าสุด กับ คำหลังสุด)
 def get_short_status(x):
     if pd.isna(x): return ""
     s = str(x).strip()
@@ -79,7 +78,6 @@ final_df['Category'] = final_df['วัสดุ'].apply(get_category)
 for col in project_cols:
     if col not in final_df.columns: final_df[col] = 0
 
-# เรียกใช้ฟังก์ชันดึงสถานะ
 df_proj['Status_Short'] = df_proj['สถานะ'].apply(get_short_status)
 
 wbs_pending = df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount')
@@ -87,6 +85,9 @@ wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประก�
 wbs_details = pd.merge(wbs_details, wbs_pending, on='องค์ประกอบ WBS', how='left').fillna(0)
 wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'คำอธิบายวัสดุ', 'Stock', 'Balance']], on='วัสดุ', how='left').fillna('-')
 wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
+
+# แปลง Network ให้เป็นข้อความและตัดทศนิยมทิ้ง เพื่อไม่ให้มีลูกน้ำใน JS
+wbs_details['Network'] = wbs_details['Network'].fillna('-').astype(str).str.replace(r'\.0$', '', regex=True)
 
 # 4. จัดการ ME2N (D060 รับเข้า)
 df_me2n_in = df_me2n[df_me2n['โรงงาน'] == 'D060'].copy()
