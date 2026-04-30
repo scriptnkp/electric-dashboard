@@ -11,11 +11,8 @@
         #pivotTable th:nth-child(1), #pivotTable td:nth-child(1) { position: sticky; left: 0; z-index: 1; }
         #pivotTable th:nth-child(2), #pivotTable td:nth-child(2) { position: sticky; left: 120px; z-index: 1; border-right: 2px solid #bdc3c7; max-width: 250px; overflow: hidden; text-overflow: ellipsis; }
         
-        /* สีของคอลัมน์ที่ถูกตรึง */
         #pivotTable th:nth-child(1), #pivotTable th:nth-child(2) { z-index: 3; background-color: #2c3e50; color: white; }
         #pivotTable td:nth-child(1), #pivotTable td:nth-child(2) { background-color: #ecf0f1; color: #2c3e50; font-weight: bold; }
-        
-        /* ไฮไลท์เวลาเอาเมาส์ชี้แถว */
         #pivotTable tbody tr:hover td { background-color: #e8f4f8 !important; }
     </style>
 </head>
@@ -71,7 +68,7 @@
         if (w.startsWith('I-68')) return 'ลงทุน 68';
         if (w.startsWith('I-69')) return 'ลงทุน 69';
         if (w.startsWith('P-NHE03')) return 'คฟม';
-        if (w.startsWith('P-SEZ02')) return 'คขก';
+        if (w.startsWith('P-SEZ02')) return 'คพพ'; // <--- เปลี่ยน คขก เป็น คพพ
         if (w.startsWith('P-TDD01')) return 'คพจ1';
         if (w.startsWith('P-TDD02')) return 'คพจ2';
         return 'อื่นๆ';
@@ -103,7 +100,6 @@
             });
             
             let bClass = row.Balance < 0 ? 'negative' : 'positive';
-            
             body += `<td style="text-align:right;"><b>${row.Total_Demand.toLocaleString()}</b></td>
                 <td class="col-stock" style="text-align:right">${row.Stock.toLocaleString()}</td>
                 <td class="${bClass}">${row.Balance.toLocaleString()}</td>
@@ -114,50 +110,22 @@
 
     function openMatGroupView(mat, desc, group, add=true) { 
         if(add) modalHistory.push({type:'MAT_GROUP', code:mat, desc:desc, group:group}); 
-        const cols = [
-            {key:'WBS', label:'WBS (คลิก)'}, 
-            {key:'Network', label:'โครงข่าย'}, 
-            {key:'Project_Name', label:'ชื่องาน'}, 
-            {key:'Qty', label:'ปริมาณ'}, 
-            {key:'PendingCount', label:'คงเหลือ (รายการ)'}, 
-            {key:'Status', label:'สถานะ'}, 
-            {key:'Applicant', label:'ผู้ควบคุม'}
-        ]; 
-        
+        const cols = [{key:'WBS', label:'WBS (คลิก)'}, {key:'Network', label:'โครงข่าย'}, {key:'Project_Name', label:'ชื่องาน'}, {key:'Qty', label:'ปริมาณ'}, {key:'PendingCount', label:'คงเหลือ (รายการ)'}, {key:'Status', label:'สถานะ'}, {key:'Applicant', label:'ผู้ควบคุม'}]; 
         let allData = wbsDataByMat[mat] || [];
         let filteredData = allData.filter(r => getProjectGroup(r.WBS) === group);
-
-        // เพิ่มการโชว์จำนวนงาน (filteredData.length) เข้าไปในหัวข้อ
         renderModal(`รายการ WBS <span style="color:#3498db; background:white; padding:2px 8px; border-radius:12px;">งบ: ${group}</span> ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวม <b>${filteredData.length}</b> งาน)</span>`, cols, filteredData); 
     }
 
     function openMatView(mat, desc, add=true) { 
         if(add) modalHistory.push({type:'MAT', code:mat, desc:desc}); 
-        const cols = [
-            {key:'WBS', label:'WBS (คลิก)'}, 
-            {key:'Network', label:'โครงข่าย'}, 
-            {key:'Project_Name', label:'ชื่องาน'}, 
-            {key:'Qty', label:'ปริมาณ'}, 
-            {key:'PendingCount', label:'คงเหลือ (รายการ)'}, 
-            {key:'Status', label:'สถานะ'}, 
-            {key:'Applicant', label:'ผู้ควบคุม'}
-        ]; 
+        const cols = [{key:'WBS', label:'WBS (คลิก)'}, {key:'Network', label:'โครงข่าย'}, {key:'Project_Name', label:'ชื่องาน'}, {key:'Qty', label:'ปริมาณ'}, {key:'PendingCount', label:'คงเหลือ (รายการ)'}, {key:'Status', label:'สถานะ'}, {key:'Applicant', label:'ผู้ควบคุม'}]; 
         let allData = wbsDataByMat[mat] || [];
         renderModal(`รายการ WBS รวมทุกงบ ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวม <b>${allData.length}</b> งาน)</span>`, cols, allData); 
     }
 
     function openWbsView(wbs, desc, add=true) { 
         if(add) modalHistory.push({type:'WBS', code:wbs, desc:desc}); 
-        const cols = [
-            {key:'วัสดุ', label:'วัสดุ (คลิก)'}, 
-            {key:'MatDesc', label:'ชื่ออุปกรณ์'}, 
-            {key:'Network', label:'โครงข่าย'}, 
-            {key:'Qty', label:'ปริมาณ'}, 
-            {key:'Stock', label:'สต๊อก'}, 
-            {key:'Balance', label:'คงเหลือ'}, 
-            {key:'Status', label:'สถานะ'}, 
-            {key:'Applicant', label:'ผู้ควบคุม'}
-        ]; 
+        const cols = [{key:'วัสดุ', label:'วัสดุ (คลิก)'}, {key:'MatDesc', label:'ชื่ออุปกรณ์'}, {key:'Network', label:'โครงข่าย'}, {key:'Qty', label:'ปริมาณ'}, {key:'Stock', label:'สต๊อก'}, {key:'Balance', label:'คงเหลือ'}, {key:'Status', label:'สถานะ'}, {key:'Applicant', label:'ผู้ควบคุม'}]; 
         let allData = wbsDataByWbs[wbs] || [];
         renderModal(`อุปกรณ์ใน WBS: <span style="color:#f1c40f;">${wbs}</span> (${desc}) <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวม <b>${allData.length}</b> รายการ)</span>`, cols, allData); 
     }
@@ -166,7 +134,16 @@
         document.getElementById('modalTitle').innerHTML = title; 
         currentModalData = data; currentModalCols = cols; 
         let h = '<tr>'; 
-        cols.forEach(c => h+=`<th>${c.label}<br><input class="modal-filter-input" data-col="${c.key}" onkeyup="filterModal()" placeholder="🔍 กรอง"></th>`); 
+        cols.forEach(c => {
+            // [อัปเดต] เปลี่ยนช่องค้นหา WBS เป็น Dropdown
+            if(c.key === 'WBS') {
+                let options = '<option value="">🔍 ทุกงบ (รวมทั้งหมด)</option>';
+                projectGroups.forEach(g => { options += `<option value="GRP:${g}">${g}</option>`; });
+                h += `<th>${c.label}<br><select class="modal-filter-input" data-col="${c.key}" onchange="filterModal()">${options}</select></th>`;
+            } else {
+                h += `<th>${c.label}<br><input class="modal-filter-input" data-col="${c.key}" onkeyup="filterModal()" placeholder="🔍 กรอง"></th>`;
+            }
+        }); 
         document.getElementById('modalThead').innerHTML = h+'</tr>'; 
         drawModalRows(data); 
         document.getElementById('drillModal').classList.add('active'); 
@@ -175,13 +152,21 @@
     function filterModal() { 
         let filters = {}; 
         document.querySelectorAll('.modal-filter-input').forEach(i => { 
-            if(i.value.trim()!=='') filters[i.getAttribute('data-col')] = i.value.trim().toLowerCase(); 
+            if(i.value.trim()!=='') filters[i.getAttribute('data-col')] = i.value.trim(); 
         }); 
         let fd = currentModalData.filter(row => { 
             for(let k in filters) { 
-                let fv=filters[k], cv=String(row[k]).toLowerCase(); 
-                if(fv.startsWith('!=') || fv.startsWith('>')) { if(!eval(`${cv} ${fv}`)) return false; } 
-                else if(!cv.includes(fv)) return false; 
+                let fv = filters[k];
+                // [อัปเดต] เช็คถ้ากรองจาก Dropdown (งบ)
+                if(k === 'WBS' && fv.startsWith('GRP:')) {
+                    let targetGroup = fv.substring(4);
+                    if(getProjectGroup(row[k]) !== targetGroup) return false;
+                } else {
+                    fv = fv.toLowerCase();
+                    let cv = String(row[k]).toLowerCase(); 
+                    if(fv.startsWith('!=') || fv.startsWith('>')) { if(!eval(`${cv} ${fv}`)) return false; } 
+                    else if(!cv.includes(fv)) return false; 
+                }
             } return true; 
         }); 
         drawModalRows(fd); 

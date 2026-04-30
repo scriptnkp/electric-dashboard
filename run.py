@@ -40,7 +40,7 @@ def get_project_group(wbs):
     elif wbs.startswith('I-68'): return 'ลงทุน 68'
     elif wbs.startswith('I-69'): return 'ลงทุน 69'
     elif wbs.startswith('P-NHE03'): return 'คฟม'
-    elif wbs.startswith('P-SEZ02'): return 'คขก'
+    elif wbs.startswith('P-SEZ02'): return 'คพพ' # <--- แก้ไขตรงนี้เป็น คพพ
     elif wbs.startswith('P-TDD01'): return 'คพจ1'
     elif wbs.startswith('P-TDD02'): return 'คพจ2'
     return 'อื่นๆ'
@@ -50,13 +50,10 @@ def get_short_status(x):
     if pd.isna(x): return ""
     s = str(x).strip()
     if not s: return ""
-    # ลบเครื่องหมาย // ทิ้งก่อน
     s_clean = s.replace('//', '').strip()
     parts = s_clean.split()
-    if len(parts) > 1:
-        return f"{parts[0]} {parts[-1]}"
-    elif len(parts) == 1:
-        return parts[0]
+    if len(parts) > 1: return f"{parts[0]} {parts[-1]}"
+    elif len(parts) == 1: return parts[0]
     return ""
 
 # 3. จัดการ WBS
