@@ -63,7 +63,6 @@
         applyFilters();
     }
 
-    // ฟังก์ชันเช็คว่า WBS นี้อยู่กลุ่มไหน (เลียนแบบ Python)
     function getProjectGroup(wbs) {
         let w = String(wbs).trim().toUpperCase();
         if (w.startsWith('C-68')) return 'ผู้ใช้ไฟ 68';
@@ -97,7 +96,6 @@
             projectGroups.forEach(g => {
                 let val = row[g] || 0;
                 if(val > 0) {
-                    // ทำให้ตัวเลขยอดรายงบเป็นลิงก์ และส่งค่างบนั้นๆ ไปด้วย
                     body += `<td class="wbs-link" style="text-align:right; font-weight:bold; color:#2980b9;" onclick="openMatGroupView('${row['วัสดุ']}', '${row['คำอธิบายวัสดุ']}', '${g}')">${val.toLocaleString()}</td>`;
                 } else {
                     body += `<td style="text-align:right;">-</td>`;
@@ -106,7 +104,6 @@
             
             let bClass = row.Balance < 0 ? 'negative' : 'positive';
             
-            // ยอดรวมเปลี่ยนเป็นโชว์เฉยๆ ไม่คลิก
             body += `<td style="text-align:right;"><b>${row.Total_Demand.toLocaleString()}</b></td>
                 <td class="col-stock" style="text-align:right">${row.Stock.toLocaleString()}</td>
                 <td class="${bClass}">${row.Balance.toLocaleString()}</td>
@@ -115,7 +112,7 @@
         document.getElementById('tbody').innerHTML = body;
     }
 
-    // ฟังก์ชันใหม่! เปิด Popup โดยกรองตามงบ (Project Group) เท่านั้น
+    // เปิด Popup แบบกรองตามงบ (เพิ่มคอลัมน์สถานะ)
     function openMatGroupView(mat, desc, group, add=true) { 
         if(add) modalHistory.push({type:'MAT_GROUP', code:mat, desc:desc, group:group}); 
         const cols = [
@@ -124,17 +121,17 @@
             {key:'Project_Name', label:'ชื่องาน'}, 
             {key:'Qty', label:'ปริมาณ'}, 
             {key:'PendingCount', label:'คงเหลือ (รายการ)'}, 
+            {key:'Status', label:'สถานะ'}, // <-- เพิ่มสถานะตรงนี้
             {key:'Applicant', label:'ผู้ควบคุม'}
         ]; 
         
-        // ดึงข้อมูลวัสดุทั้งหมด แล้วกรองเฉพาะ WBS ที่ตรงกับ "งบ" (group) ที่คลิกมา
         let allData = wbsDataByMat[mat] || [];
         let filteredData = allData.filter(r => getProjectGroup(r.WBS) === group);
 
         renderModal(`รายการ WBS <span style="color:#3498db; background:white; padding:2px 8px; border-radius:12px;">งบ: ${group}</span> ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span>`, cols, filteredData); 
     }
 
-    // ฟังก์ชันเปิด Popup แบบดูรวมทุกงบ (เวลากดที่รหัสวัสดุด้านซ้ายสุด)
+    // เปิด Popup ดูรวมทุกงบ (เพิ่มคอลัมน์สถานะ)
     function openMatView(mat, desc, add=true) { 
         if(add) modalHistory.push({type:'MAT', code:mat, desc:desc}); 
         const cols = [
@@ -143,6 +140,7 @@
             {key:'Project_Name', label:'ชื่องาน'}, 
             {key:'Qty', label:'ปริมาณ'}, 
             {key:'PendingCount', label:'คงเหลือ (รายการ)'}, 
+            {key:'Status', label:'สถานะ'}, // <-- เพิ่มสถานะตรงนี้
             {key:'Applicant', label:'ผู้ควบคุม'}
         ]; 
         renderModal(`รายการ WBS รวมทุกงบ ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span>`, cols, wbsDataByMat[mat] || []); 
@@ -210,7 +208,7 @@
             let p=modalHistory[modalHistory.length-1]; 
             if(p.type==='MAT') openMatView(p.code,p.desc,false);
             else if(p.type==='WBS') openWbsView(p.code,p.desc,false);
-            else if(p.type==='MAT_GROUP') openMatGroupView(p.code, p.desc, p.group, false); // รองรับการกดย้อนกลับ
+            else if(p.type==='MAT_GROUP') openMatGroupView(p.code, p.desc, p.group, false);
         } 
     }
 
