@@ -112,7 +112,6 @@
         document.getElementById('tbody').innerHTML = body;
     }
 
-    // เปิด Popup แบบกรองตามงบ (เพิ่มคอลัมน์สถานะ)
     function openMatGroupView(mat, desc, group, add=true) { 
         if(add) modalHistory.push({type:'MAT_GROUP', code:mat, desc:desc, group:group}); 
         const cols = [
@@ -121,17 +120,17 @@
             {key:'Project_Name', label:'ชื่องาน'}, 
             {key:'Qty', label:'ปริมาณ'}, 
             {key:'PendingCount', label:'คงเหลือ (รายการ)'}, 
-            {key:'Status', label:'สถานะ'}, // <-- เพิ่มสถานะตรงนี้
+            {key:'Status', label:'สถานะ'}, 
             {key:'Applicant', label:'ผู้ควบคุม'}
         ]; 
         
         let allData = wbsDataByMat[mat] || [];
         let filteredData = allData.filter(r => getProjectGroup(r.WBS) === group);
 
-        renderModal(`รายการ WBS <span style="color:#3498db; background:white; padding:2px 8px; border-radius:12px;">งบ: ${group}</span> ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span>`, cols, filteredData); 
+        // เพิ่มการโชว์จำนวนงาน (filteredData.length) เข้าไปในหัวข้อ
+        renderModal(`รายการ WBS <span style="color:#3498db; background:white; padding:2px 8px; border-radius:12px;">งบ: ${group}</span> ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวม <b>${filteredData.length}</b> งาน)</span>`, cols, filteredData); 
     }
 
-    // เปิด Popup ดูรวมทุกงบ (เพิ่มคอลัมน์สถานะ)
     function openMatView(mat, desc, add=true) { 
         if(add) modalHistory.push({type:'MAT', code:mat, desc:desc}); 
         const cols = [
@@ -140,10 +139,11 @@
             {key:'Project_Name', label:'ชื่องาน'}, 
             {key:'Qty', label:'ปริมาณ'}, 
             {key:'PendingCount', label:'คงเหลือ (รายการ)'}, 
-            {key:'Status', label:'สถานะ'}, // <-- เพิ่มสถานะตรงนี้
+            {key:'Status', label:'สถานะ'}, 
             {key:'Applicant', label:'ผู้ควบคุม'}
         ]; 
-        renderModal(`รายการ WBS รวมทุกงบ ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span>`, cols, wbsDataByMat[mat] || []); 
+        let allData = wbsDataByMat[mat] || [];
+        renderModal(`รายการ WBS รวมทุกงบ ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${mat}</span> <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวม <b>${allData.length}</b> งาน)</span>`, cols, allData); 
     }
 
     function openWbsView(wbs, desc, add=true) { 
@@ -158,7 +158,8 @@
             {key:'Status', label:'สถานะ'}, 
             {key:'Applicant', label:'ผู้ควบคุม'}
         ]; 
-        renderModal(`อุปกรณ์ใน WBS: <span style="color:#f1c40f;">${wbs}</span> (${desc})`, cols, wbsDataByWbs[wbs] || []); 
+        let allData = wbsDataByWbs[wbs] || [];
+        renderModal(`อุปกรณ์ใน WBS: <span style="color:#f1c40f;">${wbs}</span> (${desc}) <span style="font-size:16px; color:#ecf0f1; margin-left:10px;">(รวม <b>${allData.length}</b> รายการ)</span>`, cols, allData); 
     }
 
     function renderModal(title, cols, data) { 

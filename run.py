@@ -45,6 +45,20 @@ def get_project_group(wbs):
     elif wbs.startswith('P-TDD02'): return 'คพจ2'
     return 'อื่นๆ'
 
+# ฟังก์ชันดึงสถานะ (เอาแค่คำหน้าสุด กับ คำหลังสุด)
+def get_short_status(x):
+    if pd.isna(x): return ""
+    s = str(x).strip()
+    if not s: return ""
+    # ลบเครื่องหมาย // ทิ้งก่อน
+    s_clean = s.replace('//', '').strip()
+    parts = s_clean.split()
+    if len(parts) > 1:
+        return f"{parts[0]} {parts[-1]}"
+    elif len(parts) == 1:
+        return parts[0]
+    return ""
+
 # 3. จัดการ WBS
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
 pie_summary = df_demand.groupby('Project_Group')['องค์ประกอบ WBS'].nunique().reset_index().rename(columns={'องค์ประกอบ WBS': 'WBS_Count'})
@@ -68,8 +82,8 @@ final_df['Category'] = final_df['วัสดุ'].apply(get_category)
 for col in project_cols:
     if col not in final_df.columns: final_df[col] = 0
 
-# [อัปเดตแก้ไข] ให้แสดงข้อความ "สถานะ" แบบเต็มๆ ไม่ตัดคำทิ้งแล้วครับ!
-df_proj['Status_Short'] = df_proj['สถานะ'].apply(lambda x: str(x).strip() if pd.notna(x) else "")
+# เรียกใช้ฟังก์ชันดึงสถานะ
+df_proj['Status_Short'] = df_proj['สถานะ'].apply(get_short_status)
 
 wbs_pending = df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount')
 wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง']], df_proj[['องค์ประกอบ WBS', 'ชื่อ', 'Status_Short', 'ผู้สมัคร']], on='องค์ประกอบ WBS', how='left')
@@ -91,7 +105,7 @@ me2n_details = me2n_active[['เอกสารการจัดซื้อ', 
 me2n_vendors = sorted([str(v) for v in me2n_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
 
 # =========================================================
-# 5. จัดการ ME2N (D060 ส่งออก/จัดสรรให้คลังอื่น) + รายชื่อคลังแบบจัดเต็ม
+# 5. จัดการ ME2N (D060 ส่งออก/จัดสรรให้คลังอื่น)
 # =========================================================
 df_me2n_out = df_me2n[df_me2n['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].astype(str).str.contains('D060', na=False, case=False)].copy()
 df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
@@ -99,7 +113,6 @@ df_me2n_out['ที่เก็บสินค้า'] = df_me2n_out['ที่�
 df_me2n_out['ข้อความส่วนหัว'] = df_me2n_out['ข้อความส่วนหัว'].fillna('')
 df_me2n_out['Category'] = df_me2n_out['วัสดุ'].apply(get_category)
 
-# --- แมปชื่อคลังปลายทางที่พิมพ์ให้มาทั้งหมด (แก้ Syntax Error แล้ว) ---
 plant_map = {
     'D010': 'D010 คลังพัสดุ อุดรธานี',
     'D020': 'D020 คลังพัสดุ หนองคาย',
