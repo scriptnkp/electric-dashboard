@@ -6,63 +6,101 @@
     <link rel="stylesheet" href="style.css">
     <script src="data.js"></script>
     <style>
-        .table-wrapper { max-height: 70vh; overflow-y: auto; overflow-x: auto; border: 1px solid #bdc3c7; border-radius: 8px; }
+        .table-wrapper { max-height: 65vh; overflow-y: auto; overflow-x: auto; border: 1px solid #bdc3c7; border-radius: 8px; }
         table { width: 100%; border-collapse: collapse; min-width: 1200px; }
         th { background-color: #2c3e50; color: white; padding: 12px; text-align: center; position: sticky; top: 0; z-index: 2; font-size: 13px;}
         td { border: 1px solid #ecf0f1; padding: 10px; font-size: 14px;}
         tbody tr:nth-child(even) { background-color: #f9f9f9; }
         tbody tr:hover { background-color: #e8f4f8; }
         .num-col { text-align: right; }
-        .badge-po { background-color: #27ae60; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;}
-        .badge-pr { background-color: #f39c12; color: white; padding: 3px 8px; border-radius: 12px; font-size: 12px; font-weight: bold;}
         .overdue { color: #e74c3c; font-weight: bold; }
         
-        .summary-box { display: flex; gap: 20px; margin-bottom: 15px; background: #ecf0f1; padding: 15px; border-radius: 8px; border-left: 5px solid #3498db; }
-        .summary-item { font-size: 16px; }
-        .summary-item span { font-weight: bold; font-size: 20px; color: #2c3e50; }
+        /* สไตล์ปุ่ม Navbar ตามภาพ */
+        .navbar { display: flex; gap: 10px; background-color: #1a252f; padding: 15px; border-radius: 8px; flex-wrap: wrap; }
+        .nav-btn { text-decoration: none; padding: 8px 15px; border-radius: 5px; font-size: 14px; font-weight: bold; color: white; transition: 0.3s; border: 1px solid transparent; }
+        .nav-btn:hover { opacity: 0.8; }
+        .btn-graph { background-color: #3498db; }
+        .btn-demand { background-color: #2c3e50; border: 1px solid #7f8c8d; }
+        .btn-me2n { background-color: #2c3e50; border: 1px solid #7f8c8d; }
+        .btn-plan { background-color: #e84393; }
+        .btn-alloc { background-color: #48dbfb; color: #2c3e50; }
+        .btn-budget { background-color: #f39c12; }
+        .btn-purchase { background: linear-weight(to right, #9b59b6, #8e44ad); background-color: #9b59b6; box-shadow: 0 0 10px rgba(155, 89, 182, 0.5); border: 1px solid #8e44ad; }
+        
+        /* สไตล์กล่องสรุปยอด */
+        .summary-container { display: flex; gap: 15px; margin-bottom: 15px; }
+        .summary-card { flex: 1; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .card-pr { background-color: #fff3e0; border-left: 5px solid #f39c12; }
+        .card-po { background-color: #e8f8f5; border-left: 5px solid #1abc9c; }
+        .card-total { background-color: #fdedec; border-left: 5px solid #e74c3c; }
+        .summary-title { font-size: 14px; color: #7f8c8d; font-weight: bold; margin-bottom: 5px; }
+        .summary-value { font-size: 20px; font-weight: bold; color: #2c3e50; }
+        .summary-sub { font-size: 13px; color: #e67e22; margin-top: 3px; font-weight: bold; }
+        .summary-sub-po { font-size: 13px; color: #16a085; margin-top: 3px; font-weight: bold; }
+        
+        /* สไตล์ตัวกรอง */
+        .filter-group { display: flex; gap: 15px; align-items: center; background: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd; }
+        .filter-group select, .filter-group input { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; outline: none; }
+        .filter-group input:focus { border-color: #3498db; }
     </style>
 </head>
 <body>
     <div class="navbar">
-        <a href="index.html" class="nav-btn">📊 หน้ากราฟ</a>
-        <a href="demand.html" class="nav-btn active-btn">📋 ตารางความต้องการ</a>
-        <a href="me2n.html" class="nav-btn">📦 วัสดรอนำเข้า (ME2N)</a>
-        <a href="plan1.html" class="nav-btn" style="background-color: #e84393; border-color: #e84393; font-weight:bold;">🛒 แผนซื้อ กฟฉ.1</a>
-        <a href="allocate.html" class="nav-btn" style="background-color: #63cdda; border-color: #63cdda; color:#2c3e50; font-weight:bold;">🚚 จัดสรรให้คลังต่างๆ</a>
-        <a href="budget.html" class="nav-btn" style="background-color: #f39c12; border-color: #f39c12; color:white; font-weight:bold;">💰 งบเงิน</a>
-        <a href="purchase.html" class="nav-btn active-btn" style="background-color: #8e44ad; border-color: #8e44ad; color:white; font-weight:bold;">🛒 รายการจัดซื้อ</a>
+        <a href="index.html" class="nav-btn btn-graph">📊 หน้ากราฟ</a>
+        <a href="demand.html" class="nav-btn btn-demand">📋 ตารางความต้องการ</a>
+        <a href="me2n.html" class="nav-btn btn-me2n">📦 วัสดุรอนำเข้า (ME2N)</a>
+        <a href="plan1.html" class="nav-btn btn-plan">🛒 แผนซื้อ กฟฉ.1</a>
+        <a href="allocate.html" class="nav-btn btn-alloc">🚚 จัดสรรให้คลังต่างๆ</a>
+        <a href="budget.html" class="nav-btn btn-budget">💰 งบเงิน</a>
+        <a href="purchase.html" class="nav-btn btn-purchase">🛒 รายการจัดซื้อ</a>
         <div style="margin-left: auto; align-self: center; font-size: 14px; color: #ecf0f1;">
             🕒 อัปเดตล่าสุด: <span id="lastUpdatedText" style="color: #f1c40f; font-weight: bold;"></span>
         </div>
     </div>
 
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-            <h2 style="margin: 0;">🛒 รายการจัดซื้อ (รอรับของ)</h2>
+        <h2 style="margin-top: 10px; margin-bottom: 15px; color: #2c3e50;">🛒 รายการจัดซื้อ (รอรับของ)</h2>
+        
+        <!-- แถบตัวกรอง -->
+        <div class="filter-group">
             <div>
-                <label style="font-weight:bold; font-size:16px;">🔍 กรอง WBS: </label>
-                <select id="wbsFilter" onchange="renderTable()" style="padding: 8px; border-radius: 5px; font-size: 14px; min-width: 250px;">
+                <label style="font-weight:bold; font-size:14px; color:#34495e;">🔍 กรอง WBS: </label>
+                <select id="wbsFilter" onchange="renderTable()" style="min-width: 200px;">
                     <option value="ALL">✅ รวมทั้งหมดทุก WBS</option>
                 </select>
             </div>
+            <div>
+                <label style="font-weight:bold; font-size:14px; color:#34495e;">📄 เลขเอกสาร: </label>
+                <input type="text" id="docFilter" onkeyup="renderTable()" placeholder="พิมพ์เลข PR หรือ PO..." style="min-width: 200px;">
+            </div>
         </div>
 
-        <!-- กล่องสรุปยอด -->
-        <div class="summary-box">
-            <div class="summary-item">📝 เอกสาร PR ทั้งหมด: <span id="prCount">0</span> ชุด</div>
-            <div class="summary-item">📑 เอกสาร PO ทั้งหมด: <span id="poCount">0</span> ชุด</div>
-            <div class="summary-item" style="margin-left:auto;">💵 ยอดเงินรวม: <span id="totalAmount" style="color:#e74c3c;">0.00</span> บาท</div>
+        <!-- กล่องสรุปยอดแยก PR / PO -->
+        <div class="summary-container">
+            <div class="summary-card card-pr">
+                <div class="summary-title">📝 เอกสาร PR ทั้งหมด</div>
+                <div class="summary-value"><span id="prCount">0</span> ชุด</div>
+                <div class="summary-sub">มูลค่ารวม: ฿ <span id="prAmount">0.00</span></div>
+            </div>
+            <div class="summary-card card-po">
+                <div class="summary-title">📑 เอกสาร PO ทั้งหมด</div>
+                <div class="summary-value"><span id="poCount">0</span> ชุด</div>
+                <div class="summary-sub-po">มูลค่ารวม: ฿ <span id="poAmount">0.00</span></div>
+            </div>
+            <div class="summary-card card-total">
+                <div class="summary-title">💵 ยอดเงินรวมทั้งสิ้น</div>
+                <div class="summary-value" style="color:#c0392b;">฿ <span id="totalAmount">0.00</span></div>
+            </div>
         </div>
 
         <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>
-                        <th style="min-width: 200px;">บริษัท (ผู้ขาย)</th>
-                        <th>ประเภท</th>
-                        <th>เลขเอกสาร</th>
-                        <th>วัสดุ</th>
-                        <th style="min-width: 250px;">คำอธิบายวัสดุ</th>
+                        <th style="min-width: 220px;">บริษัท (ผู้ขาย)</th>
+                        <th style="min-width: 120px;">เลขเอกสาร</th>
+                        <th style="min-width: 120px;">วัสดุ</th>
+                        <th style="min-width: 300px;">คำอธิบายวัสดุ</th>
                         <th>จำนวน</th>
                         <th>วันที่ส่งมอบ (PO Date)</th>
                         <th>เกินวันส่งมอบ (วัน)</th>
@@ -78,7 +116,7 @@
         document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
         
         if (typeof purchaseData === 'undefined' || purchaseData.length === 0) {
-            document.getElementById('tableBody').innerHTML = '<tr><td colspan="8" style="text-align:center; color:red; padding: 20px;">ไม่พบข้อมูลรายการจัดซื้อ...</td></tr>';
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:red; padding: 20px;">ไม่พบข้อมูลรายการจัดซื้อ...</td></tr>';
             return;
         }
 
@@ -92,27 +130,36 @@
 
     function renderTable() {
         const selectedWBS = document.getElementById('wbsFilter').value;
+        const searchDoc = document.getElementById('docFilter').value.trim().toLowerCase();
+        
         let fd = purchaseData;
         
-        // กรองตาม WBS ที่เลือก
+        // 1. กรองตาม WBS
         if(selectedWBS !== 'ALL') {
             fd = fd.filter(r => r.WBS === selectedWBS);
+        }
+
+        // 2. กรองตามเลขเอกสาร (PR หรือ PO)
+        if(searchDoc !== '') {
+            fd = fd.filter(r => String(r.DocNum).toLowerCase().includes(searchDoc));
         }
 
         let h = '';
         let uniquePRs = new Set();
         let uniquePOs = new Set();
-        let sumAmount = 0;
+        let sumPRAmount = 0;
+        let sumPOAmount = 0;
 
         fd.forEach(r => {
-            // นับเอกสารที่ไม่ซ้ำกัน
-            if(r.DocType === 'PR') uniquePRs.add(r.DocNum);
-            else if(r.DocType === 'PO') uniquePOs.add(r.DocNum);
-            
-            // รวมยอดเงิน
-            sumAmount += r.Amount;
+            // นับเอกสารที่ไม่ซ้ำกัน และแยกยอดเงิน PR / PO
+            if(r.DocType === 'PR') {
+                uniquePRs.add(r.DocNum);
+                sumPRAmount += r.Amount;
+            } else if(r.DocType === 'PO') {
+                uniquePOs.add(r.DocNum);
+                sumPOAmount += r.Amount;
+            }
 
-            let typeBadge = r.DocType === 'PO' ? `<span class="badge-po">PO</span>` : `<span class="badge-pr">PR</span>`;
             let overdueText = r.OverdueDays;
             if (typeof overdueText === 'number' && overdueText > 0) {
                 overdueText = `<span class="overdue">เกิน ${overdueText} วัน</span>`;
@@ -120,11 +167,13 @@
                 overdueText = `<span style="color:#27ae60;">ยังไม่ถึงกำหนด</span>`;
             }
 
+            // เพิ่มไอคอนหน้าเลขเอกสารให้ดูง่ายขึ้น
+            let docIcon = r.DocType === 'PO' ? '📑' : '📝';
+
             h += `<tr>
                 <td><b>${r.Company}</b></td>
-                <td style="text-align:center;">${typeBadge}</td>
-                <td style="text-align:center; font-weight:bold; color:#34495e;">${r.DocNum}</td>
-                <td>${r.Mat}</td>
+                <td style="text-align:center; font-weight:bold; color:#34495e;" title="ประเภท: ${r.DocType}">${docIcon} ${r.DocNum}</td>
+                <td style="text-align:center;">${r.Mat}</td>
                 <td>${r.Desc}</td>
                 <td class="num-col"><b>${r.Qty.toLocaleString()}</b></td>
                 <td style="text-align:center;">${r.DeliveryDate}</td>
@@ -132,12 +181,17 @@
             </tr>`;
         });
 
-        document.getElementById('tableBody').innerHTML = h || '<tr><td colspan="8" style="text-align:center;">ไม่มีข้อมูลใน WBS นี้</td></tr>';
+        document.getElementById('tableBody').innerHTML = h || '<tr><td colspan="7" style="text-align:center;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
         
         // อัปเดตกล่องสรุปด้านบน
         document.getElementById('prCount').innerText = uniquePRs.size;
+        document.getElementById('prAmount').innerText = sumPRAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
         document.getElementById('poCount').innerText = uniquePOs.size;
-        document.getElementById('totalAmount').innerText = sumAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('poAmount').innerText = sumPOAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        
+        let totalSum = sumPRAmount + sumPOAmount;
+        document.getElementById('totalAmount').innerText = totalSum.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
     }
 
     window.onload = init;
