@@ -6,46 +6,103 @@
     <link rel="stylesheet" href="style.css">
     <script src="data.js"></script>
     <style>
-        .table-wrapper { max-height: 65vh; overflow-y: auto; overflow-x: auto; border: 1px solid #bdc3c7; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-        th { background-color: #2c3e50; color: white; padding: 12px; text-align: center; position: sticky; top: 0; z-index: 2; font-size: 13px;}
-        td { border: 1px solid #ecf0f1; padding: 10px; font-size: 14px;}
-        tbody tr:nth-child(even) { background-color: #f9f9f9; }
-        tbody tr:hover { background-color: #e8f4f8; }
-        .num-col { text-align: right; }
-        .overdue { color: #e74c3c; font-weight: bold; }
-        
-        /* สไตล์ปุ่ม Navbar ตามภาพ */
-        .navbar { display: flex; gap: 10px; background-color: #1a252f; padding: 15px; border-radius: 8px; flex-wrap: wrap; }
-        .nav-btn { text-decoration: none; padding: 8px 15px; border-radius: 5px; font-size: 14px; font-weight: bold; color: white; transition: 0.3s; border: 1px solid transparent; }
-        .nav-btn:hover { opacity: 0.8; }
-        .btn-graph { background-color: #3498db; }
-        .btn-demand { background-color: #2c3e50; border: 1px solid #7f8c8d; }
-        .btn-me2n { background-color: #2c3e50; border: 1px solid #7f8c8d; }
-        .btn-plan { background-color: #e84393; }
-        .btn-alloc { background-color: #48dbfb; color: #2c3e50; }
-        .btn-budget { background-color: #f39c12; }
-        .btn-purchase { background: linear-gradient(to right, #9b59b6, #8e44ad); box-shadow: 0 0 10px rgba(155, 89, 182, 0.5); border: 1px solid #8e44ad; }
-        
-        /* สไตล์กล่องสรุปยอด */
-        .summary-container { display: flex; gap: 15px; margin-bottom: 15px; }
-        .summary-card { flex: 1; padding: 15px; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-        .card-pr { background-color: #fff3e0; border-left: 5px solid #f39c12; }
-        .card-po { background-color: #e8f8f5; border-left: 5px solid #1abc9c; }
-        .card-total { background-color: #fdedec; border-left: 5px solid #e74c3c; }
-        .summary-title { font-size: 14px; color: #7f8c8d; font-weight: bold; margin-bottom: 5px; }
-        .summary-value { font-size: 20px; font-weight: bold; color: #2c3e50; }
-        .summary-sub { font-size: 13px; color: #e67e22; margin-top: 3px; font-weight: bold; }
-        .summary-sub-po { font-size: 13px; color: #16a085; margin-top: 3px; font-weight: bold; }
-        
-        /* สไตล์ตัวกรอง */
-        .filter-group { display: flex; gap: 15px; align-items: center; background: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd; }
-        .filter-group select, .filter-group input { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; outline: none; }
-        .filter-group input:focus { border-color: #3498db; }
+/* =========================================
+   สไตล์ Navbar และ ปุ่มเมนู (แบบสวยงามโมเดิร์น)
+   ========================================= */
+.navbar { 
+    display: flex; 
+    align-items: center;
+    gap: 12px; 
+    background: linear-gradient(145deg, #1c2833, #2c3e50); /* ไล่สีพื้นหลังให้ดูมีมิติ */
+    padding: 12px 20px; 
+    border-radius: 12px; 
+    flex-wrap: wrap; 
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); /* เงากล่องเมนู */
+    margin-bottom: 20px;
+}
 
-        /* สไตล์ปุ่ม Copy */
-        .copy-btn { cursor: pointer; font-size: 16px; margin-left: 8px; opacity: 0.5; transition: 0.2s; user-select: none; }
-        .copy-btn:hover { opacity: 1; transform: scale(1.2); }
+.nav-btn { 
+    text-decoration: none; 
+    padding: 10px 18px; 
+    border-radius: 8px; 
+    font-size: 14px; 
+    font-weight: 600; 
+    color: white; 
+    transition: all 0.3s ease; /* ทำให้เวลาชี้เมาส์ดูนุ่มนวล */
+    border: 1px solid transparent; 
+    display: flex;
+    align-items: center;
+    gap: 6px; /* ระยะห่างระหว่างไอคอนกับข้อความ */
+}
+
+/* เอฟเฟกต์เวลาเอาเมาส์ชี้ (Hover) */
+.nav-btn:hover { 
+    transform: translateY(-2px); /* เด้งขึ้นนิดหน่อย */
+    filter: brightness(1.15); /* สว่างขึ้น */
+}
+
+.nav-btn:active {
+    transform: translateY(0); /* เวลากดให้ยุบลงไป */
+}
+
+/* สีเฉพาะของแต่ละปุ่ม พร้อมเงาเรืองแสง */
+.btn-graph { 
+    background-color: #3498db; 
+    box-shadow: 0 4px 10px rgba(52, 152, 219, 0.3); 
+}
+
+/* ปุ่มแบบขอบใส (เมนูรอง) */
+.btn-demand, .btn-me2n { 
+    background-color: transparent; 
+    border: 1px solid #7f8c8d; 
+    color: #bdc3c7; 
+}
+.btn-demand:hover, .btn-me2n:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-color: #bdc3c7;
+    box-shadow: none;
+}
+
+.btn-plan { 
+    background-color: #e84393; 
+    box-shadow: 0 4px 10px rgba(232, 67, 147, 0.3); 
+}
+
+.btn-alloc { 
+    background-color: #48dbfb; 
+    color: #1a252f; 
+    box-shadow: 0 4px 10px rgba(72, 219, 251, 0.3); 
+}
+
+.btn-budget { 
+    background-color: #f39c12; 
+    box-shadow: 0 4px 10px rgba(243, 156, 18, 0.3); 
+}
+
+.btn-purchase { 
+    background: linear-gradient(135deg, #9b59b6, #8e44ad); 
+    box-shadow: 0 4px 12px rgba(155, 89, 182, 0.4); 
+    border: 1px solid #9b59b6;
+}
+
+/* กล่องเวลาอัปเดตด้านขวาสุด */
+.update-box {
+    margin-left: auto; 
+    font-size: 13px; 
+    color: #ecf0f1; 
+    background: rgba(0, 0, 0, 0.2); /* พื้นหลังโปร่งใส */
+    padding: 8px 15px; 
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.update-box span {
+    color: #f1c40f; 
+    font-weight: bold;
+    margin-left: 5px;
+}
     </style>
 </head>
 <body>
@@ -57,8 +114,9 @@
         <a href="allocate.html" class="nav-btn btn-alloc">🚚 จัดสรรให้คลังต่างๆ</a>
         <a href="budget.html" class="nav-btn btn-budget">💰 งบเงิน</a>
         <a href="purchase.html" class="nav-btn btn-purchase">🛒 รายการจัดซื้อ</a>
-        <div style="margin-left: auto; align-self: center; font-size: 14px; color: #ecf0f1;">
-            🕒 อัปเดตล่าสุด: <span id="lastUpdatedText" style="color: #f1c40f; font-weight: bold;"></span>
+        
+        <div class="update-box">
+            🕒 อัปเดตล่าสุด: <span id="lastUpdatedText"></span>
         </div>
     </div>
 
