@@ -14,25 +14,42 @@ file_budget_c = 'C.txt'
 file_budget_i = 'I.txt'
 file_budget_p = 'P.txt'
 file_budget_n = 'N.txt'
-file_z005 = 'z005.txt'     # <--- เพิ่มไฟล์ใหม่
-file_n_z005 = 'n-z005.txt' # <--- เพิ่มไฟล์ใหม่
+file_z005 = 'z005.txt'
+file_n_z005 = 'n-z005.txt'
 
-print("กำลังอ่านไฟล์ Excel และ Txt...")
-# ... [โค้ดส่วนดึงไฟล์ Excel และ Mapping เหมือนเดิม] ...
+print("กำลังอ่านไฟล์ Excel และ Txt ทั้งหมด...")
 df_stock = pd.read_excel(file_mb52)
 df_demand = pd.read_excel(file_zmb25)
 df_proj = pd.read_excel(file_cn43n)
 df_me2n = pd.read_excel(file_me2n)
 
-cat_map = { '1-00-001': 'ผลิตภัณฑ์คอนกรีต', '1-02-001': 'สายไฟ', '1-03-000': 'ลูกถ้วย', '1-04-000': 'แก้ไฟ', '1-05-000': 'หม้อแปลง' }
+# 2. ฟังก์ชันและ Mapping พื้นฐาน
+cat_map = {
+    '1-00-001': 'ผลิตภัณฑ์คอนกรีต', '1-00-002': 'ผลิตภัณฑ์คอนกรีต', '1-00-004': 'ผลิตภัณฑ์คอนกรีต', '1-00-005': 'ผลิตภัณฑ์คอนกรีต', '1-00-011': 'ผลิตภัณฑ์คอนกรีต', '1-00-021': 'ผลิตภัณฑ์คอนกรีต',
+    '1-02-001': 'สายไฟ', '1-02-002': 'สายไฟ', '1-02-003': 'สายไฟ', '1-02-004': 'สายไฟ', '1-02-005': 'สายไฟ', '1-02-006': 'สายไฟ', '1-02-007': 'สายไฟ', '1-02-008': 'สายไฟ',
+    '1-03-000': 'ลูกถ้วย', '1-03-001': 'ลูกถ้วย', '1-03-002': 'ลูกถ้วย', '1-03-003': 'ลูกถ้วย',
+    '1-04-000': 'แก้ไฟ', '1-04-001': 'แก้ไฟ', '1-04-002': 'แก้ไฟ', '1-04-003': 'แก้ไฟ',
+    '1-05-000': 'หม้อแปลง', '1-05-001': 'หม้อแปลง',
+    '1-06-002': 'มิเตอร์ ซีที วีที', '1-06-003': 'มิเตอร์ ซีที วีที', '1-06-004': 'มิเตอร์ ซีที วีที', '1-06-005': 'มิเตอร์ ซีที วีที', '1-06-006': 'มิเตอร์ ซีที วีที', '1-06-007': 'มิเตอร์ ซีที วีที', '1-06-008': 'มิเตอร์ ซีที วีที', '1-06-009': 'มิเตอร์ ซีที วีที',
+    '1-06-010': 'อุปกรณ์ประกอบมิเตอร์',
+    '1-42-028': 'ใบเสร็จรับเงิน', '1-42-035': 'ใบเสร็จรับเงิน',
+    '1-02-030': 'PG', '1-02-018': 'เทป',
+    '1-01-011': 'สลักเกลียว', '1-01-012': 'สลักเกลียว', '1-01-013': 'สลักเกลียว', '1-01-014': 'สลักเกลียว', '1-01-015': 'สลักเกลียว', '1-01-016': 'สลักเกลียว',
+    '1-07-001': 'ชุดโคมไฟ', '1-07-003': 'ชุดโคมไฟ', '1-08-006': 'โซล่าเซล'
+}
 def get_category(mat_code): return cat_map.get(str(mat_code)[:8], 'วัสดุอื่นๆ')
 
 def get_project_group(wbs):
     wbs = str(wbs).strip().upper()
     if wbs.startswith('C-68'): return 'ผู้ใช้ไฟ 68'
     elif wbs.startswith('C-69'): return 'ผู้ใช้ไฟ 69'
+    elif wbs.startswith('I-67'): return 'ลงทุน 67'
+    elif wbs.startswith('I-68'): return 'ลงทุน 68'
+    elif wbs.startswith('I-69'): return 'ลงทุน 69'
     elif wbs.startswith('P-NHE03'): return 'คฟม'
     elif wbs.startswith('P-SEZ02'): return 'คพพ' 
+    elif wbs.startswith('P-TDD01'): return 'คพจ1'
+    elif wbs.startswith('P-TDD02'): return 'คพจ2'
     return 'อื่นๆ'
 
 def get_short_status(x):
@@ -42,9 +59,10 @@ def get_short_status(x):
     elif len(parts) == 1: return parts[0]
     return ""
 
-# จัดการข้อมูลความต้องการ
+# 3. จัดการ WBS และ Dashboard
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
 pie_summary = df_demand.groupby('Project_Group')['องค์ประกอบ WBS'].nunique().reset_index().rename(columns={'องค์ประกอบ WBS': 'WBS_Count'})
+
 pivot_demand = df_demand.pivot_table(index='วัสดุ', columns='Project_Group', values='ปริมาณผลต่าง', aggfunc='sum', fill_value=0).reset_index()
 project_cols = [col for col in pivot_demand.columns if col != 'วัสดุ']
 pivot_demand['Total_Demand'] = pivot_demand[project_cols].sum(axis=1)
@@ -72,39 +90,124 @@ wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'คำอธ�
 wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 wbs_details['Network'] = wbs_details['Network'].fillna('-').astype(str).str.replace(r'\.0$', '', regex=True)
 
-# จัดการ ME2N
+# 4. จัดการ ME2N รับเข้าและจัดสรร
 df_me2n_in = df_me2n[df_me2n['โรงงาน'] == 'D060'].copy()
 df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
 df_me2n_in['ที่เก็บสินค้า'] = df_me2n_in['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
+df_me2n_in['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'] = df_me2n_in['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].fillna('-ไม่ระบุ-')
+df_me2n_in['ข้อความส่วนหัว'] = df_me2n_in['ข้อความส่วนหัว'].fillna('')
+df_me2n_in['Category'] = df_me2n_in['วัสดุ'].apply(get_category)
 me2n_active = df_me2n_in[df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
-me2n_summary = me2n_active.groupby(['วัสดุ', 'ข้อความสั้น'])['ยังจะถูกส่งมอบ (ปริมาณ)'].sum().reset_index()
-me2n_details = me2n_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว']]
-me2n_vendors = []
+me2n_summary = me2n_active.groupby(['วัสดุ', 'ข้อความสั้น', 'Category'])['ยังจะถูกส่งมอบ (ปริมาณ)'].sum().reset_index()
+me2n_details = me2n_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
+me2n_vendors = sorted([str(v) for v in me2n_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
 
 df_me2n_out = df_me2n[df_me2n['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].astype(str).str.contains('D060', na=False, case=False)].copy()
 df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
+df_me2n_out['ที่เก็บสินค้า'] = df_me2n_out['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
+df_me2n_out['ข้อความส่วนหัว'] = df_me2n_out['ข้อความส่วนหัว'].fillna('')
+df_me2n_out['Category'] = df_me2n_out['วัสดุ'].apply(get_category)
+plant_map = {'D010': 'D010 คลังพัสดุ อุดรธานี', 'D020': 'D020 คลังพัสดุ หนองคาย', 'D030': 'D030 คลังพัสดุ หนองบัวลำภู', 'D040': 'D040 คลังพัสดุ เลย', 'D050': 'D050 คลังพัสดุ สกลนคร', 'D060': 'D060 คลังพัสดุ นครพนม', 'D070': 'D070 คลังพัสดุ บึงกาฬ', 'D090': 'D090 คลังพัสดุ หนองหาน', 'D100': 'D100 คลังพัสดุ พังโคน', 'D110': 'D110 คลังพัสดุ หนองบัวลำภู', 'D120': 'D120 คลังพัสดุ บ้านไผ่', 'D130': 'D130 คลังพัสดุ บึงกาฬ'}
+df_me2n_out['โรงงาน'] = df_me2n_out['โรงงาน'].apply(lambda x: plant_map.get(str(x).strip(), str(x).strip())).fillna('-ไม่ระบุ-')
 alloc_active = df_me2n_out[df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
-alloc_details = alloc_active[['เอกสารการจัดซื้อ', 'โรงงาน', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว']]
-alloc_plants = []
-me2n1_details = pd.DataFrame(); me2n1_vendors = []
+alloc_details = alloc_active[['เอกสารการจัดซื้อ', 'โรงงาน', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
+alloc_plants = sorted([str(v) for v in alloc_active['โรงงาน'].unique() if str(v) != '-ไม่ระบุ-'])
 
-# ไฟล์งบการเงิน
-budget_data = []
+# 5. จัดการ ME2N1 (แผนซื้อ กฟฉ.1)
+try:
+    df_me2n1 = pd.read_excel(file_me2n1)
+    df_me2n1_dan = df_me2n1[df_me2n1['กลุ่มการจัดซื้อ'] == 'DAN'].copy()
+    df_me2n1_dan['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n1_dan['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
+    df_me2n1_dan['ที่เก็บสินค้า'] = df_me2n1_dan['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
+    df_me2n1_dan['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'] = df_me2n1_dan['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].fillna('-ไม่ระบุ-')
+    df_me2n1_dan['ข้อความส่วนหัว'] = df_me2n1_dan['ข้อความส่วนหัว'].fillna('')
+    df_me2n1_dan['Category'] = df_me2n1_dan['วัสดุ'].apply(get_category)
+    me2n1_active = df_me2n1_dan[df_me2n1_dan['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy()
+    me2n1_details = me2n1_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
+    me2n1_vendors = sorted([str(v) for v in me2n1_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
+except Exception as e:
+    print(f"Warning: ME2N1 error: {e}")
+    me2n1_details = pd.DataFrame()
+    me2n1_vendors = []
 
 # ==========================================
-# จัดการไฟล์รายการจัดซื้อ (z005.txt และ n-z005.txt)
+# 6. จัดการไฟล์งบเงิน (C.txt, I.txt, P.txt, N.txt)
+# ==========================================
+wbs_names_map = {}
+try:
+    with open(file_budget_n, 'r', encoding='utf-8') as f: lines = f.readlines()
+except:
+    try:
+        with open(file_budget_n, 'r', encoding='cp874') as f: lines = f.readlines()
+    except Exception as e:
+        lines = []
+
+for line in lines:
+    if line.startswith('|') and 'องค์ประกอบ WBS' not in line:
+        parts = line.split('|')
+        if len(parts) > 3:
+            w = parts[2].strip()
+            name = parts[3].strip()
+            if w and name:
+                wbs_names_map[w] = name
+
+budget_data = []
+def process_budget_file(file_path, file_type):
+    try:
+        with open(file_path, 'r', encoding='cp874') as f:
+            lines = f.readlines()
+            
+        for line in lines:
+            if line.startswith('|') and 'WBS' not in line and 'รายการ' not in line and 'รวม' not in line:
+                parts = line.split('|')
+                if len(parts) >= 14:
+                    wbs = parts[3].strip()
+                    if not wbs: continue
+                    
+                    def get_val(idx):
+                        try: return float(parts[idx].strip().replace(',', ''))
+                        except: return 0.0
+
+                    col_remain_11 = get_val(14)
+                    show = False
+                    if 'NPN' in wbs:
+                        show = True
+                    elif file_type == 'C' and ('AED' in wbs or 'POP' in wbs):
+                        show = True
+                    
+                    if col_remain_11 > 0 and show:
+                        budget_data.append({
+                            'WBS': wbs,
+                            'Project_Name': wbs_names_map.get(wbs, '-'),
+                            'Col3': get_val(6),   
+                            'Col4': get_val(7),   
+                            'Col5': get_val(8),   
+                            'Col6': get_val(9),   
+                            'Col7': get_val(10),  
+                            'Col8': get_val(11),  
+                            'Col9': get_val(12),  
+                            'Col10': get_val(13), 
+                            'Col11': col_remain_11 
+                        })
+    except Exception as e:
+        pass
+
+process_budget_file(file_budget_c, 'C')
+process_budget_file(file_budget_i, 'I')
+process_budget_file(file_budget_p, 'P')
+
+# ==========================================
+# 7. จัดการไฟล์รายการจัดซื้อ (z005.txt และ n-z005.txt)
 # ==========================================
 purchase_data = []
 
-# 1. อ่านชื่อบริษัทจาก n-z005
 vendor_map = {}
 try:
     with open(file_n_z005, 'r', encoding='utf-8') as f: lines = f.readlines()
 except:
     try:
         with open(file_n_z005, 'r', encoding='cp874') as f: lines = f.readlines()
-    except Exception as e:
-        print(f"Warning: อ่านไฟล์ n-z005.txt ไม่ได้ ({e})")
+    except:
         lines = []
 
 for line in lines:
@@ -113,15 +216,13 @@ for line in lines:
         if len(parts) >= 2:
             vendor_map[parts[0].strip()] = parts[1].strip()
 
-# 2. อ่านข้อมูลจัดซื้อจาก z005
-current_date = datetime(2026, 5, 1) # ใช้วันที่ 01.05.2026 เป็นเกณฑ์ตั้งต้น
+current_date = datetime(2026, 5, 1)
 try:
     with open(file_z005, 'r', encoding='utf-8') as f: lines = f.readlines()
 except:
     try:
         with open(file_z005, 'r', encoding='cp874') as f: lines = f.readlines()
-    except Exception as e:
-        print(f"Warning: อ่านไฟล์ z005.txt ไม่ได้ ({e})")
+    except:
         lines = []
 
 for line in lines:
@@ -135,7 +236,6 @@ for line in lines:
             po_num = parts[8].strip()
             gr_ir = parts[10].strip()
             
-            # แปลงตัวเลข
             def get_num(val):
                 try: return float(val.strip().replace(',', ''))
                 except: return 0.0
@@ -147,9 +247,7 @@ for line in lines:
             po_price = get_num(parts[17])
             vendor = parts[20].strip()
             
-            # เงื่อนไข: ให้ GR ดูจากช่องว่าง (คือยังไม่รับของเข้า)
             if gr_ir == '':
-                # ถ้ามี PO โชว์ PO, ถ้าไม่มี โชว์ PR
                 has_po = len(po_num) > 0
                 
                 doc_num = po_num if has_po else pr_num
@@ -158,10 +256,8 @@ for line in lines:
                 price = po_price if has_po and po_price > 0 else pr_price
                 amount = qty * price
                 
-                # แมตช์ชื่อบริษัท
                 company_name = vendor_map.get(vendor, vendor) if vendor else '-'
                 
-                # คำนวณวันเกินกำหนด
                 overdue_days = '-'
                 if po_date_str:
                     try:
@@ -170,7 +266,7 @@ for line in lines:
                         if diff > 0:
                             overdue_days = diff
                         else:
-                            overdue_days = 0 # ยังไม่ถึงกำหนด
+                            overdue_days = 0
                     except:
                         pass
                 
@@ -190,7 +286,7 @@ for line in lines:
 tz_th = timezone(timedelta(hours=7))
 update_time = datetime.now(tz_th).strftime("%d/%m/%Y เวลา %H:%M น.")
 
-# เขียนข้อมูลลงไฟล์ data.js (เพิ่ม purchaseData)
+# เขียนข้อมูลลงไฟล์ data.js อย่างสมบูรณ์ 100%
 js_content = f"""// ไฟล์นี้ถูกสร้างอัตโนมัติจาก Python (ห้ามแก้ไขด้วยมือ)
 const lastUpdated = "{update_time}";
 const pieRawData = {json.dumps(pie_summary.to_dict(orient='records'))};
@@ -200,12 +296,12 @@ const wbsDataByMat = {json.dumps({mat: grp.to_dict(orient='records') for mat, gr
 const wbsDataByWbs = {json.dumps({wbs: grp.to_dict(orient='records') for wbs, grp in wbs_details.groupby('WBS')})};
 const me2nSummaryData = {json.dumps(me2n_summary.to_dict(orient='records'))};
 const me2nDetailsData = {json.dumps(me2n_details.to_dict(orient='records'))};
-const me2nVendors = [];
-const me2n1DetailsData = [];
-const me2n1Vendors = [];
+const me2nVendors = {json.dumps(me2n_vendors)};
+const me2n1DetailsData = {json.dumps(me2n1_details.to_dict(orient='records'))};
+const me2n1Vendors = {json.dumps(me2n1_vendors)};
 const allocDetailsData = {json.dumps(alloc_details.to_dict(orient='records'))};
-const allocPlants = [];
-const budgetData = [];
+const allocPlants = {json.dumps(alloc_plants)};
+const budgetData = {json.dumps(budget_data)};
 const purchaseData = {json.dumps(purchase_data)};
 """
 
