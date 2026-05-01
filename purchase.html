@@ -25,7 +25,7 @@
         .btn-plan { background-color: #e84393; }
         .btn-alloc { background-color: #48dbfb; color: #2c3e50; }
         .btn-budget { background-color: #f39c12; }
-        .btn-purchase { background: linear-weight(to right, #9b59b6, #8e44ad); background-color: #9b59b6; box-shadow: 0 0 10px rgba(155, 89, 182, 0.5); border: 1px solid #8e44ad; }
+        .btn-purchase { background: linear-gradient(to right, #9b59b6, #8e44ad); box-shadow: 0 0 10px rgba(155, 89, 182, 0.5); border: 1px solid #8e44ad; }
         
         /* สไตล์กล่องสรุปยอด */
         .summary-container { display: flex; gap: 15px; margin-bottom: 15px; }
@@ -189,12 +189,11 @@
                 overdueText = `<span style="color:#27ae60;">ยังไม่ถึงกำหนด</span>`;
             }
 
-            let docIcon = r.DocType === 'PO' ? '📑' : '📝';
-
+            // นำตัวแปร docIcon ออก เพื่อลบรูปไอคอนด้านซ้ายของเลขเอกสาร
             h += `<tr>
                 <td><b>${r.Company}</b></td>
                 <td style="text-align:center; font-weight:bold; color:#34495e;" title="ประเภท: ${r.DocType}">
-                    ${docIcon} ${r.DocNum} 
+                    ${r.DocNum} 
                     <span class="copy-btn" onclick="copyDocNum('${r.DocNum}', this)" title="คัดลอกเลขเอกสาร">📋</span>
                 </td>
                 <td style="text-align:center;">${r.Mat}</td>
