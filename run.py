@@ -4,7 +4,7 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
-# 1. ตั้งค่าไฟล์
+# 1. ตั้งค่าไฟล์ทั้งหมด 11 ไฟล์
 file_mb52 = '6.mb52.XLSX'
 file_zmb25 = '11.zmb25.XLSX'
 file_cn43n = '14.CN43N.xlsx'
@@ -17,13 +17,13 @@ file_budget_n = 'N.txt'
 file_z005 = 'z005.txt'
 file_n_z005 = 'n-z005.txt'
 
-print("กำลังอ่านไฟล์ Excel และ Txt ทั้งหมด...")
+print("กำลังอ่านไฟล์ Excel และ Txt...")
 df_stock = pd.read_excel(file_mb52)
 df_demand = pd.read_excel(file_zmb25)
 df_proj = pd.read_excel(file_cn43n)
 df_me2n = pd.read_excel(file_me2n)
 
-# 2. ฟังก์ชันและ Mapping พื้นฐาน
+# 2. ฟังก์ชันและ Mapping 
 cat_map = {
     '1-00-001': 'ผลิตภัณฑ์คอนกรีต', '1-00-002': 'ผลิตภัณฑ์คอนกรีต', '1-00-004': 'ผลิตภัณฑ์คอนกรีต', '1-00-005': 'ผลิตภัณฑ์คอนกรีต', '1-00-011': 'ผลิตภัณฑ์คอนกรีต', '1-00-021': 'ผลิตภัณฑ์คอนกรีต',
     '1-02-001': 'สายไฟ', '1-02-002': 'สายไฟ', '1-02-003': 'สายไฟ', '1-02-004': 'สายไฟ', '1-02-005': 'สายไฟ', '1-02-006': 'สายไฟ', '1-02-007': 'สายไฟ', '1-02-008': 'สายไฟ',
@@ -31,9 +31,7 @@ cat_map = {
     '1-04-000': 'แก้ไฟ', '1-04-001': 'แก้ไฟ', '1-04-002': 'แก้ไฟ', '1-04-003': 'แก้ไฟ',
     '1-05-000': 'หม้อแปลง', '1-05-001': 'หม้อแปลง',
     '1-06-002': 'มิเตอร์ ซีที วีที', '1-06-003': 'มิเตอร์ ซีที วีที', '1-06-004': 'มิเตอร์ ซีที วีที', '1-06-005': 'มิเตอร์ ซีที วีที', '1-06-006': 'มิเตอร์ ซีที วีที', '1-06-007': 'มิเตอร์ ซีที วีที', '1-06-008': 'มิเตอร์ ซีที วีที', '1-06-009': 'มิเตอร์ ซีที วีที',
-    '1-06-010': 'อุปกรณ์ประกอบมิเตอร์',
-    '1-42-028': 'ใบเสร็จรับเงิน', '1-42-035': 'ใบเสร็จรับเงิน',
-    '1-02-030': 'PG', '1-02-018': 'เทป',
+    '1-06-010': 'อุปกรณ์ประกอบมิเตอร์', '1-42-028': 'ใบเสร็จรับเงิน', '1-42-035': 'ใบเสร็จรับเงิน', '1-02-030': 'PG', '1-02-018': 'เทป',
     '1-01-011': 'สลักเกลียว', '1-01-012': 'สลักเกลียว', '1-01-013': 'สลักเกลียว', '1-01-014': 'สลักเกลียว', '1-01-015': 'สลักเกลียว', '1-01-016': 'สลักเกลียว',
     '1-07-001': 'ชุดโคมไฟ', '1-07-003': 'ชุดโคมไฟ', '1-08-006': 'โซล่าเซล'
 }
@@ -59,7 +57,7 @@ def get_short_status(x):
     elif len(parts) == 1: return parts[0]
     return ""
 
-# 3. จัดการ WBS และ Dashboard
+# 3. จัดการข้อมูลความต้องการ (Demand & Stock)
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
 pie_summary = df_demand.groupby('Project_Group')['องค์ประกอบ WBS'].nunique().reset_index().rename(columns={'องค์ประกอบ WBS': 'WBS_Count'})
 
@@ -90,7 +88,7 @@ wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'คำอธ�
 wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 wbs_details['Network'] = wbs_details['Network'].fillna('-').astype(str).str.replace(r'\.0$', '', regex=True)
 
-# 4. จัดการ ME2N รับเข้าและจัดสรร
+# 4. จัดการ ME2N
 df_me2n_in = df_me2n[df_me2n['โรงงาน'] == 'D060'].copy()
 df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
 df_me2n_in['ที่เก็บสินค้า'] = df_me2n_in['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
@@ -113,7 +111,7 @@ alloc_active = df_me2n_out[df_me2n_out['ยังจะถูกส่งมอ�
 alloc_details = alloc_active[['เอกสารการจัดซื้อ', 'โรงงาน', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
 alloc_plants = sorted([str(v) for v in alloc_active['โรงงาน'].unique() if str(v) != '-ไม่ระบุ-'])
 
-# 5. จัดการ ME2N1 (แผนซื้อ กฟฉ.1)
+# 5. จัดการ ME2N1
 try:
     df_me2n1 = pd.read_excel(file_me2n1)
     df_me2n1_dan = df_me2n1[df_me2n1['กลุ่มการจัดซื้อ'] == 'DAN'].copy()
@@ -126,12 +124,10 @@ try:
     me2n1_details = me2n1_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
     me2n1_vendors = sorted([str(v) for v in me2n1_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
 except Exception as e:
-    print(f"Warning: ME2N1 error: {e}")
-    me2n1_details = pd.DataFrame()
-    me2n1_vendors = []
+    me2n1_details = pd.DataFrame(); me2n1_vendors = []
 
 # ==========================================
-# 6. จัดการไฟล์งบเงิน (C.txt, I.txt, P.txt, N.txt)
+# 6. อ่านไฟล์ N.txt (ดึงชื่องบไปใช้)
 # ==========================================
 wbs_names_map = {}
 try:
@@ -139,7 +135,7 @@ try:
 except:
     try:
         with open(file_budget_n, 'r', encoding='cp874') as f: lines = f.readlines()
-    except Exception as e:
+    except:
         lines = []
 
 for line in lines:
@@ -151,6 +147,9 @@ for line in lines:
             if w and name:
                 wbs_names_map[w] = name
 
+# ==========================================
+# 7. จัดการไฟล์งบเงิน (C.txt, I.txt, P.txt)
+# ==========================================
 budget_data = []
 def process_budget_file(file_path, file_type):
     try:
@@ -197,7 +196,7 @@ process_budget_file(file_budget_i, 'I')
 process_budget_file(file_budget_p, 'P')
 
 # ==========================================
-# 7. จัดการไฟล์รายการจัดซื้อ (z005.txt และ n-z005.txt)
+# 8. จัดการรายการจัดซื้อ (z005.txt และ n-z005.txt)
 # ==========================================
 purchase_data = []
 
@@ -247,6 +246,7 @@ for line in lines:
             po_price = get_num(parts[17])
             vendor = parts[20].strip()
             
+            # กรองเอาเฉพาะอันที่ GR ว่าง
             if gr_ir == '':
                 has_po = len(po_num) > 0
                 
@@ -283,10 +283,10 @@ for line in lines:
                     'OverdueDays': overdue_days
                 })
 
+# 9. บันทึกเป็น data.js
 tz_th = timezone(timedelta(hours=7))
 update_time = datetime.now(tz_th).strftime("%d/%m/%Y เวลา %H:%M น.")
 
-# เขียนข้อมูลลงไฟล์ data.js อย่างสมบูรณ์ 100%
 js_content = f"""// ไฟล์นี้ถูกสร้างอัตโนมัติจาก Python (ห้ามแก้ไขด้วยมือ)
 const lastUpdated = "{update_time}";
 const pieRawData = {json.dumps(pie_summary.to_dict(orient='records'))};

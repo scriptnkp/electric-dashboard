@@ -5,16 +5,6 @@
     <title>งบเงิน</title>
     <link rel="stylesheet" href="style.css">
     <script src="data.js"></script>
-    <style>
-        .table-wrapper { max-height: 70vh; overflow-y: auto; overflow-x: auto; border: 1px solid #bdc3c7; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; min-width: 1200px; }
-        th { background-color: #2c3e50; color: white; padding: 12px; text-align: center; position: sticky; top: 0; z-index: 2; font-size: 13px;}
-        td { border: 1px solid #ecf0f1; padding: 10px; font-size: 14px;}
-        tbody tr:nth-child(even) { background-color: #f9f9f9; }
-        tbody tr:hover { background-color: #e8f4f8; }
-        .num-col { text-align: right; }
-        tfoot th { background-color: #34495e; color: #f1c40f; text-align: right; font-size: 14px; position: sticky; bottom: 0; padding: 12px;}
-    </style>
 </head>
 <body>
     <div class="navbar">
@@ -25,16 +15,15 @@
         <a href="allocate.html" class="nav-btn btn-alloc">🚚 จัดสรรให้คลังต่างๆ</a>
         <a href="budget.html" class="nav-btn btn-budget">💰 งบเงิน</a>
         <a href="purchase.html" class="nav-btn btn-purchase">🛒 รายการจัดซื้อ</a>
-        
         <div class="update-box">
             🕒 อัปเดตล่าสุด: <span id="lastUpdatedText">กำลังอัปเดต...</span>
         </div>
     </div>
 
     <div class="container">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-            <h2 style="margin: 0;">💰 รายงานวงเงินงบประมาณ (NPN ทั้งหมด, และ AED/POP เฉพาะงบ C)</h2>
-        </div>
+        <h2 style="margin-top: 0; margin-bottom: 20px; color: #2c3e50;">
+            💰 รายการวงเงินงบประมาณ (NPN ทั้งหมด, และ AED/POP เฉพาะงบ C)
+        </h2>
 
         <div class="table-wrapper">
             <table>
@@ -73,7 +62,7 @@
 
 <script>
     function init() {
-        document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
+        if (typeof lastUpdated !== 'undefined') document.getElementById('lastUpdatedText').innerText = lastUpdated;
         
         if (typeof budgetData === 'undefined' || budgetData.length === 0) {
             document.getElementById('budgetBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:red; padding: 20px;">ไม่พบข้อมูล หรือกำลังรอ GitHub ประมวลผล...</td></tr>';
@@ -88,7 +77,6 @@
             sums[6] += r.Col6; sums[7] += r.Col7; sums[8] += r.Col8;
             sums[9] += r.Col9; sums[10] += r.Col10; sums[11] += r.Col11;
 
-            // [อัปเดต] นำ r.Project_Name มาโชว์ด้านล่างรหัส WBS
             let projNameHtml = r.Project_Name !== '-' ? `<br><span style="font-size: 12px; color: #7f8c8d; font-weight: normal;">${r.Project_Name}</span>` : '';
 
             h += `<tr>
