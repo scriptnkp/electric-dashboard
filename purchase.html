@@ -42,6 +42,10 @@
         .filter-group { display: flex; gap: 15px; align-items: center; background: #f8f9fa; padding: 10px 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #ddd; }
         .filter-group select, .filter-group input { padding: 8px; border-radius: 4px; border: 1px solid #ccc; font-size: 14px; outline: none; }
         .filter-group input:focus { border-color: #3498db; }
+
+        /* สไตล์ปุ่ม Copy */
+        .copy-btn { cursor: pointer; font-size: 16px; margin-left: 8px; opacity: 0.5; transition: 0.2s; user-select: none; }
+        .copy-btn:hover { opacity: 1; transform: scale(1.2); }
     </style>
 </head>
 <body>
@@ -98,7 +102,7 @@
                 <thead>
                     <tr>
                         <th style="min-width: 220px;">บริษัท (ผู้ขาย)</th>
-                        <th style="min-width: 120px;">เลขเอกสาร</th>
+                        <th style="min-width: 140px;">เลขเอกสาร</th>
                         <th style="min-width: 120px;">วัสดุ</th>
                         <th style="min-width: 300px;">คำอธิบายวัสดุ</th>
                         <th>จำนวน</th>
@@ -116,7 +120,7 @@
         document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
         
         if (typeof purchaseData === 'undefined' || purchaseData.length === 0) {
-            document.getElementById('tableBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:red; padding: 20px;">ไม่พบข้อมูลรายการจัดซื้อ...</td></tr>';
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:red; padding: 20px;">ไม่พบข้อมูลรายการจัดซื้อ หรือรอ GitHub ประมวลผล...</td></tr>';
             return;
         }
 
@@ -126,6 +130,24 @@
         uniqueWBS.forEach(w => wbsSelect.appendChild(new Option(w, w)));
 
         renderTable();
+    }
+
+    // ฟังก์ชันสำหรับก๊อปปี้เลขเอกสาร
+    function copyDocNum(text, element) {
+        navigator.clipboard.writeText(text).then(() => {
+            const originalIcon = element.innerText;
+            element.innerText = '✅'; // เปลี่ยนไอคอนเป็นเครื่องหมายถูก
+            element.style.opacity = '1';
+            
+            // ให้กลับมาเป็นรูป 📋 เหมือนเดิมใน 1.5 วินาที
+            setTimeout(() => {
+                element.innerText = originalIcon;
+                element.style.opacity = '0.5';
+            }, 1500);
+        }).catch(err => {
+            console.error('ไม่สามารถคัดลอกได้: ', err);
+            alert("ไม่สามารถคัดลอกได้อัตโนมัติ กรุณากด Ctrl+C แทนครับ");
+        });
     }
 
     function renderTable() {
@@ -167,12 +189,14 @@
                 overdueText = `<span style="color:#27ae60;">ยังไม่ถึงกำหนด</span>`;
             }
 
-            // เพิ่มไอคอนหน้าเลขเอกสารให้ดูง่ายขึ้น
             let docIcon = r.DocType === 'PO' ? '📑' : '📝';
 
             h += `<tr>
                 <td><b>${r.Company}</b></td>
-                <td style="text-align:center; font-weight:bold; color:#34495e;" title="ประเภท: ${r.DocType}">${docIcon} ${r.DocNum}</td>
+                <td style="text-align:center; font-weight:bold; color:#34495e;" title="ประเภท: ${r.DocType}">
+                    ${docIcon} ${r.DocNum} 
+                    <span class="copy-btn" onclick="copyDocNum('${r.DocNum}', this)" title="คัดลอกเลขเอกสาร">📋</span>
+                </td>
                 <td style="text-align:center;">${r.Mat}</td>
                 <td>${r.Desc}</td>
                 <td class="num-col"><b>${r.Qty.toLocaleString()}</b></td>
