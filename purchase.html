@@ -64,8 +64,9 @@
                         <th style="min-width: 130px;">วัสดุ</th>
                         <th style="min-width: 300px;">คำอธิบายวัสดุ</th>
                         <th>จำนวน</th>
-                        <th>วันที่ส่งมอบ (PO Date)</th>
-                        <th>เกินวันส่งมอบ (วัน)</th>
+                        <th style="min-width: 120px;">วันที่ทำสัญญา PO</th>
+                        <th style="min-width: 130px;">วันครบกำหนด<br>(+30 วัน)</th>
+                        <th>สถานะจัดส่ง</th>
                     </tr>
                 </thead>
                 <tbody id="tableBody"></tbody>
@@ -78,7 +79,7 @@
         if (typeof lastUpdated !== 'undefined') document.getElementById('lastUpdatedText').innerText = lastUpdated;
         
         if (typeof purchaseData === 'undefined' || purchaseData.length === 0) {
-            document.getElementById('tableBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:red; padding: 30px;">ไม่พบข้อมูลรายการจัดซื้อ หรือกำลังรอประมวลผล...</td></tr>';
+            document.getElementById('tableBody').innerHTML = '<tr><td colspan="8" style="text-align:center; color:red; padding: 30px;">ไม่พบข้อมูลรายการจัดซื้อ หรือกำลังรอประมวลผล...</td></tr>';
             return;
         }
 
@@ -125,8 +126,13 @@
             else if(r.DocType === 'PO') { uniquePOs.add(r.DocNum); sumPOAmount += r.Amount; }
 
             let overdueText = r.OverdueDays;
-            if (typeof overdueText === 'number' && overdueText > 0) overdueText = `<span class="overdue">เกิน ${overdueText} วัน</span>`;
-            else if (overdueText === 0) overdueText = `<span style="color:#27ae60;">ยังไม่ถึงกำหนด</span>`;
+            if (typeof overdueText === 'number' && overdueText > 0) {
+                overdueText = `<span class="overdue">เกินกำหนด ${overdueText} วัน</span>`;
+            } else if (overdueText === 0) {
+                overdueText = `<span style="color:#27ae60; font-weight:bold;">ยังไม่ถึงกำหนด</span>`;
+            } else {
+                overdueText = '-';
+            }
 
             h += `<tr>
                 <td><b>${r.Company}</b></td>
@@ -137,12 +143,13 @@
                 <td style="text-align:center; color:#555;">${r.Mat}</td>
                 <td>${r.Desc}</td>
                 <td class="num-col"><b>${r.Qty.toLocaleString()}</b></td>
-                <td style="text-align:center;">${r.DeliveryDate}</td>
+                <td style="text-align:center;">${r.PoDate}</td>
+                <td style="text-align:center; font-weight:bold; color:#d35400;">${r.DueDate}</td>
                 <td style="text-align:center;">${overdueText}</td>
             </tr>`;
         });
 
-        document.getElementById('tableBody').innerHTML = h || '<tr><td colspan="7" style="text-align:center; padding: 20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
+        document.getElementById('tableBody').innerHTML = h || '<tr><td colspan="8" style="text-align:center; padding: 20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
         
         document.getElementById('prCount').innerText = uniquePRs.size;
         document.getElementById('prAmount').innerText = sumPRAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
