@@ -4,7 +4,7 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
-# 1. ตั้งค่าไฟล์ทั้งหมด 11 ไฟล์
+# 1. ตั้งค่าไฟล์
 file_mb52 = '6.mb52.XLSX'
 file_zmb25 = '11.zmb25.XLSX'
 file_cn43n = '14.CN43N.xlsx'
@@ -196,7 +196,7 @@ process_budget_file(file_budget_i, 'I')
 process_budget_file(file_budget_p, 'P')
 
 # ==========================================
-# 8. จัดการรายการจัดซื้อ (z005.txt และ n-z005.txt)
+# 8. จัดการรายการจัดซื้อ (บวกวันครบกำหนดเพิ่ม 30 วัน)
 # ==========================================
 purchase_data = []
 
@@ -255,18 +255,24 @@ for line in lines:
                 qty = po_qty if has_po and po_qty > 0 else pr_qty
                 price = po_price if has_po and po_price > 0 else pr_price
                 amount = qty * price
-                
                 company_name = vendor_map.get(vendor, vendor) if vendor else '-'
                 
+                # ระบบคำนวณวันครบกำหนด (PO Date + 30 วัน)
                 overdue_days = '-'
+                due_date_str = '-'
+                
                 if po_date_str:
                     try:
                         po_date = datetime.strptime(po_date_str, '%d.%m.%Y')
-                        diff = (current_date - po_date).days
+                        due_date = po_date + timedelta(days=30)
+                        due_date_str = due_date.strftime('%d.%m.%Y')
+                        
+                        # คำนวณวันเกินกำหนด
+                        diff = (current_date - due_date).days
                         if diff > 0:
                             overdue_days = diff
                         else:
-                            overdue_days = 0
+                            overdue_days = 0 # ยังไม่เกินกำหนด
                     except:
                         pass
                 
@@ -279,7 +285,8 @@ for line in lines:
                     'Desc': desc,
                     'Qty': qty,
                     'Amount': amount,
-                    'DeliveryDate': po_date_str if po_date_str else '-',
+                    'PoDate': po_date_str if po_date_str else '-',
+                    'DueDate': due_date_str,
                     'OverdueDays': overdue_days
                 })
 
