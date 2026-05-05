@@ -33,7 +33,7 @@
         /* สไตล์ Modal (หน้าต่างป๊อปอัป) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(2px);}
         .modal-overlay.active { display: flex; }
-        .modal-content { background: white; width: 90%; max-width: 1000px; border-radius: 12px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2);}
+        .modal-content { background: white; width: 95%; max-width: 1200px; border-radius: 12px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2);}
         .modal-header { background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0; font-size: 18px; font-weight: bold;}
         .modal-body { padding: 20px; overflow-y: auto; }
         .close-btn { background: #e74c3c; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; font-weight: bold; transition: 0.2s; font-size: 14px;}
@@ -145,12 +145,12 @@
                 <table style="width: 100%;">
                     <thead>
                         <tr>
-                            <th style="min-width: 150px;">WBS</th>
-                            <th>โครงข่าย</th>
+                            <th style="min-width: 150px;">WBS (คลิก)</th>
+                            <th style="min-width: 100px;">โครงข่าย</th>
                             <th style="min-width: 250px;">ชื่องาน</th>
+                            <th>ปริมาณค้างจ่าย</th>
                             <th>สถานะ</th>
                             <th>ผู้ควบคุม</th>
-                            <th>ปริมาณ (ค้างจ่าย)</th>
                         </tr>
                     </thead>
                     <tbody id="matModalBodyContent"></tbody>
@@ -170,7 +170,7 @@
             return;
         }
 
-        // สร้างตัวเลือก Dropdown
+        // 1. สร้างตัวเลือก Dropdown สำหรับ กฟฟ., ผู้ควบคุม, ทีมงาน
         const branches = [...new Set(wbsSummaryData.map(item => item.Branch))].sort();
         const supervisors = [...new Set(wbsSummaryData.map(item => item.Supervisor))].filter(s => s !== '-').sort();
         const teams = [...new Set(wbsSummaryData.map(item => item.Team))].filter(t => t !== '-').sort();
@@ -183,14 +183,14 @@
         supervisors.forEach(s => supSel.appendChild(new Option(s, s)));
         teams.forEach(t => tmSel.appendChild(new Option(t, t)));
 
-        // สร้างหัวตารางที่ 2 
+        // 2. สร้างหัวตารางที่ 2 
         let thHtml = `<tr>
             <th style="min-width:140px;">รหัสวัสดุ <br><span style="font-size:11px; color:#f1c40f;">(คลิกเพื่อกรอง WBS ด้านบน)</span></th>
             <th style="min-width:300px;">คำอธิบายวัสดุ</th>`;
         projectGroups.forEach(g => { thHtml += `<th>${g}</th>`; });
         thHtml += `<th style="background-color:#d35400;">รวมความต้องการ<br><span style="font-size:11px; color:#f1c40f;">(คลิกตัวเลขดูรายละเอียด)</span></th>
                    <th style="background-color:#27ae60;">สต็อก D060</th>
-                   <th style="background-color:#2980b9;">ขาด/เหลือ</th></tr>`;
+                   <th style="background-color:#2980b9;">ขาด/เหลือ<br><span style="font-size:11px; color:#f1c40f;">(คลิกดูรายละเอียด)</span></th></tr>`;
         document.getElementById('matHead').innerHTML = thHtml;
 
         applyFilters();
@@ -278,7 +278,7 @@
                 <td>${r['คำอธิบายวัสดุ']}</td>
                 ${pgCols}
                 <td class="num-col" style="background-color:#fdf2e9;">
-                    <span class="link-num" onclick="showMatDetails('${r['วัสดุ']}', 'ALL')" title="ดูรายละเอียดรวม">${r.Total_Demand.toLocaleString()}</span>
+                    <span class="link-num" style="color:#d35400;" onclick="showMatDetails('${r['วัสดุ']}', 'ALL')" title="ดูรายละเอียดรวม">${r.Total_Demand.toLocaleString()}</span>
                 </td>
                 <td class="num-col" style="color:#27ae60; font-weight:bold; background-color:#eafaf1;">${r.Stock.toLocaleString()}</td>
                 <td class="num-col" style="${balColor} font-weight:bold; background-color:#ebf5fb;">
@@ -310,34 +310,51 @@
         document.getElementById('wbsModal').classList.add('active'); 
     }
 
-    // Modal 2: ดู WBS ที่รอรับพัสดุชิ้นนี้ 
-    // เพิ่มการกรองตามกลุ่มงาน (groupName) ถ้าระบุ ALL คือดูทั้งหมด
+    // Modal 2: ดู WBS ที่รอรับพัสดุชิ้นนี้ (แบบเดียวกับเวอร์ชันแรก)
     function showMatDetails(matCode, groupName) {
         let desc = mainData.find(m => m['วัสดุ'] === matCode)?.['คำอธิบายวัสดุ'] || '';
         let titleSuffix = groupName === 'ALL' ? 'ทั้งหมด' : `เฉพาะกลุ่ม: ${groupName}`;
-        document.getElementById('matModalTitle').innerHTML = `📋 รายชื่อ WBS ที่ใช้ <b>${matCode}</b> <br><span style="font-size:14px; font-weight:normal; color:#f1c40f;">${desc} (${titleSuffix})</span>`;
+        document.getElementById('matModalTitle').innerHTML = `📋 รายการ WBS ที่ใช้อุปกรณ์: <b>${matCode}</b> <br><span style="font-size:14px; font-weight:normal; color:#f1c40f;">${desc} (${titleSuffix})</span>`;
         
         let data = wbsDataByMat[matCode] || [];
         let h = '';
         
-        // กรองหา WBS ตามกลุ่มงาน
+        // สร้าง Mapping หาข้อมูล Group จาก WBS Summary
+        let wbsGroupMap = {};
+        if (typeof wbsSummaryData !== 'undefined') {
+            wbsSummaryData.forEach(r => {
+                // อ้างอิงจากตรรกะเดิมใน run.py
+                let g = 'อื่นๆ';
+                let w = r.WBS.toUpperCase();
+                if(w.startsWith('C-68')) g = 'ผู้ใช้ไฟ 68';
+                else if(w.startsWith('C-69')) g = 'ผู้ใช้ไฟ 69';
+                else if(w.startsWith('I-67')) g = 'ลงทุน 67';
+                else if(w.startsWith('I-68')) g = 'ลงทุน 68';
+                else if(w.startsWith('I-69')) g = 'ลงทุน 69';
+                else if(w.startsWith('P-NHE03')) g = 'คฟม';
+                else if(w.startsWith('P-SEZ02')) g = 'คพพ';
+                else if(w.startsWith('P-TDD01')) g = 'คพจ1';
+                else if(w.startsWith('P-TDD02')) g = 'คพจ2';
+                wbsGroupMap[r.WBS] = g;
+            });
+        }
+        
         data.forEach(r => {
             if(r.Qty > 0) {
-                // เช็คว่า WBS นี้อยู่ในกลุ่มที่ต้องการดูหรือไม่
-                let wbsGroupInfo = df_demand_pending_groups.find(x => x.WBS === r.WBS);
+                let wbsGroup = wbsGroupMap[r.WBS] || 'อื่นๆ';
                 let showRow = true;
-                if(groupName !== 'ALL' && wbsGroupInfo && wbsGroupInfo.Group !== groupName) {
+                if(groupName !== 'ALL' && wbsGroup !== groupName) {
                     showRow = false;
                 }
 
                 if(showRow) {
                     h += `<tr>
-                        <td style="font-weight:bold; color:#2c3e50;">${r.WBS}</td>
-                        <td style="text-align:center;">${r.Network}</td>
+                        <td style="font-weight:bold; color:#3498db;"><a href="#" onclick="showWbsDetails('${r.WBS}'); return false;" style="text-decoration:underline;">${r.WBS}</a></td>
+                        <td style="text-align:center; color:#7f8c8d;">${r.Network}</td>
                         <td>${r.Project_Name}</td>
+                        <td class="num-col" style="color:#c0392b; font-weight:bold;">${r.Qty.toLocaleString()}</td>
                         <td style="text-align:center;"><span class="badge-status">${r.Status}</span></td>
                         <td style="text-align:center;">${r.Applicant}</td>
-                        <td class="num-col" style="color:#c0392b; font-weight:bold;">${r.Qty.toLocaleString()}</td>
                     </tr>`;
                 }
             }
@@ -350,28 +367,6 @@
     function closeModal(modalId) {
         document.getElementById(modalId).classList.remove('active');
     }
-
-    // ตัวแปรเสริมเพื่อช่วยจับกลุ่มงานตอนกด Popup ตารางที่ 2
-    let df_demand_pending_groups = [];
-    setTimeout(() => {
-        if(typeof wbsSummaryData !== 'undefined') {
-            // สร้าง Mapping ระหว่าง WBS -> Project Group
-            df_demand_pending_groups = wbsSummaryData.map(r => {
-                let g = 'อื่นๆ';
-                let w = r.WBS.toUpperCase();
-                if(w.startsWith('C-68')) g = 'ผู้ใช้ไฟ 68';
-                else if(w.startsWith('C-69')) g = 'ผู้ใช้ไฟ 69';
-                else if(w.startsWith('I-67')) g = 'ลงทุน 67';
-                else if(w.startsWith('I-68')) g = 'ลงทุน 68';
-                else if(w.startsWith('I-69')) g = 'ลงทุน 69';
-                else if(w.startsWith('P-NHE03')) g = 'คฟม';
-                else if(w.startsWith('P-SEZ02')) g = 'คพพ';
-                else if(w.startsWith('P-TDD01')) g = 'คพจ1';
-                else if(w.startsWith('P-TDD02')) g = 'คพจ2';
-                return {WBS: r.WBS, Group: g};
-            });
-        }
-    }, 500);
 
 </script>
 </body>
