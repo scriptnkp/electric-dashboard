@@ -20,7 +20,7 @@ file_n_z005 = 'n-z005.txt'
 print("กำลังอ่านไฟล์ TXT ทั้งหมด...")
 
 # ==========================================
-# ฟังก์ชันช่วยอ่านไฟล์ Txt และแก้ปัญหาเครื่องหมาย | หลุดในข้อความ
+# ฟังก์ชันช่วยอ่านไฟล์ Txt 
 # ==========================================
 def read_sap_txt(filepath):
     data = []
@@ -37,7 +37,6 @@ def read_sap_txt(filepath):
         if line.startswith('|'):
             parts = [p.strip() for p in line.split('|')[1:-1]]
             if not headers:
-                # ตรวจจับหัวตาราง
                 if any(k in p for p in parts for k in ['วัสดุ', 'องค์ประกอบ WBS', 'รง.', 'Lev']):
                     headers = [h.strip() for h in parts]
             elif headers:
@@ -45,7 +44,6 @@ def read_sap_txt(filepath):
                     if len(parts) == len(headers):
                         data.append(parts)
                     elif len(parts) > len(headers):
-                        # ซ่อมแซมบรรทัดที่มี | หลุดมาในข้อความ
                         idx = -1
                         if 'ข้อความส่วนหัว' in headers:
                             idx = headers.index('ข้อความส่วนหัว')
@@ -64,7 +62,6 @@ def read_sap_txt(filepath):
         return df
     return pd.DataFrame()
 
-# แปลงตัวเลข SAP (รองรับลูกน้ำ และเครื่องหมายลบด้านหลัง เช่น '1-')
 def parse_sap_num(x):
     s = str(x).replace(',', '').strip()
     if not s: return 0.0
@@ -73,7 +70,7 @@ def parse_sap_num(x):
     except: return 0.0
 
 # ------------------------------------------
-# 1. อ่านไฟล์ 6.mb52.txt (สต็อก)
+# อ่านไฟล์ข้อมูลหลัก
 # ------------------------------------------
 df_stock = read_sap_txt(file_mb52)
 if not df_stock.empty:
@@ -82,9 +79,6 @@ if not df_stock.empty:
 else:
     df_stock = pd.DataFrame(columns=['วัสดุ', 'คำอธิบายวัสดุ', 'โรงงาน', 'ที่เก็บสินค้า', 'ที่ใช้ได้'])
 
-# ------------------------------------------
-# 2. อ่านไฟล์ 11.zmb25.txt (ความต้องการ)
-# ------------------------------------------
 df_demand = read_sap_txt(file_zmb25)
 if not df_demand.empty:
     df_demand.rename(columns={'ปริมาณต่าง': 'ปริมาณผลต่าง'}, inplace=True)
@@ -92,16 +86,10 @@ if not df_demand.empty:
 else:
     df_demand = pd.DataFrame(columns=['วัสดุ', 'คำอธิบายวัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง'])
 
-# ------------------------------------------
-# 3. อ่าน 14.CN43N.txt (โปรเจ็กต์)
-# ------------------------------------------
 df_proj = read_sap_txt(file_cn43n)
 if df_proj.empty:
-    df_proj = pd.DataFrame(columns=['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร'])
+    df_proj = pd.DataFrame(columns=['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร', 'วท.ชำระ', 'Basic strt'])
 
-# ------------------------------------------
-# 4. อ่าน 12.ME2N.txt และ 13.ME2N1.txt (จัดสรร/แผนซื้อ)
-# ------------------------------------------
 renames_me2n = {
     'รง.': 'โรงงาน',
     'ผู้ขาย/โรงงานจัดหา': 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ',
@@ -111,17 +99,14 @@ renames_me2n = {
     'PGr': 'กลุ่มการจัดซื้อ',
     'วันส่งมอบ': 'วันที่ส่งมอบ'
 }
-
 df_me2n = read_sap_txt(file_me2n)
-if not df_me2n.empty:
-    df_me2n.rename(columns=renames_me2n, inplace=True)
+if not df_me2n.empty: df_me2n.rename(columns=renames_me2n, inplace=True)
 
 df_me2n1 = read_sap_txt(file_me2n1)
-if not df_me2n1.empty:
-    df_me2n1.rename(columns=renames_me2n, inplace=True)
+if not df_me2n1.empty: df_me2n1.rename(columns=renames_me2n, inplace=True)
 
 # ==========================================
-# 2. ฟังก์ชันและ Mapping 
+# ฟังก์ชันหมวดหมู่วัสดุ และ ฟังก์ชันย่อย
 # ==========================================
 cat_map = {
     '1-00-001': 'ผลิตภัณฑ์คอนกรีต', '1-00-002': 'ผลิตภัณฑ์คอนกรีต', '1-00-004': 'ผลิตภัณฑ์คอนกรีต', '1-00-005': 'ผลิตภัณฑ์คอนกรีต', '1-00-011': 'ผลิตภัณฑ์คอนกรีต', '1-00-021': 'ผลิตภัณฑ์คอนกรีต',
@@ -150,14 +135,14 @@ def get_project_group(wbs):
     return 'อื่นๆ'
 
 def get_short_status(x):
-    if pd.isna(x): return ""
+    if pd.isna(x): return "-"
     parts = str(x).replace('//', '').strip().split()
     if len(parts) > 1: return f"{parts[0]} {parts[-1]}"
     elif len(parts) == 1: return parts[0]
-    return ""
+    return "-"
 
 # ==========================================
-# 3. จัดการข้อมูลความต้องการ (Demand & Stock)
+# จัดการข้อมูลความต้องการ (Demand) 
 # ==========================================
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
 pie_summary = df_demand.groupby('Project_Group')['องค์ประกอบ WBS'].nunique().reset_index().rename(columns={'องค์ประกอบ WBS': 'WBS_Count'})
@@ -183,6 +168,8 @@ for col in project_cols:
 
 df_proj['Status_Short'] = df_proj['สถานะ'].apply(get_short_status)
 wbs_pending = df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount')
+
+# สร้างชุดข้อมูล wbs_details (สำหรับหน้าเดิม)
 wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง']], df_proj[['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร']], on='องค์ประกอบ WBS', how='left')
 wbs_details = pd.merge(wbs_details, wbs_pending, on='องค์ประกอบ WBS', how='left').fillna(0)
 wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'คำอธิบายวัสดุ', 'Stock', 'Balance']], on='วัสดุ', how='left').fillna('-')
@@ -190,8 +177,64 @@ wbs_details['Status_Short'] = wbs_details['สถานะ'].apply(get_short_sta
 wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 wbs_details['Network'] = wbs_details['Network'].fillna('-').astype(str).str.replace(r'\.0$', '', regex=True)
 
+# ------------------------------------------
+# สร้างข้อมูลใหม่สำหรับหน้า Demand (WBS Summary)
+# ------------------------------------------
+df_demand_pending = df_demand[df_demand['ปริมาณผลต่าง'] > 0].copy()
+wbs_summary_grp = df_demand_pending.groupby('องค์ประกอบ WBS').agg({
+    'โครงข่าย': 'first',
+    'วัสดุ': 'nunique' 
+}).reset_index().rename(columns={'วัสดุ': 'PendingItems'})
+
+if not df_proj.empty:
+    wbs_summary_df = pd.merge(wbs_summary_grp, df_proj, on='องค์ประกอบ WBS', how='left')
+else:
+    wbs_summary_df = wbs_summary_grp.copy()
+    for col in ['ชื่อ', 'สถานะ', 'ผู้สมัคร', 'วท.ชำระ', 'Basic strt']: wbs_summary_df[col] = '-'
+
+def get_branch(wbs):
+    wbs = str(wbs).upper()
+    if 'NPN' in wbs: return 'นครพนม'
+    if 'TPN' in wbs: return 'ธาตุพนม'
+    if 'NGE' in wbs: return 'นาแก'
+    if 'BPG' in wbs: return 'บ้านแพง'
+    return 'อื่นๆ'
+
+def get_team(name):
+    name = str(name).strip()
+    match = re.search(r'([a-zA-Z]+)[^a-zA-Z]*$', name)
+    if match: return match.group(1).upper()
+    return '-'
+
+wbs_summary_df['Branch'] = wbs_summary_df['องค์ประกอบ WBS'].apply(get_branch)
+wbs_summary_df['Team'] = wbs_summary_df['ชื่อ'].apply(get_team)
+wbs_summary_df['Supervisor'] = wbs_summary_df['ผู้สมัคร'].replace('', '-').fillna('-')
+wbs_summary_df['Status_Short'] = wbs_summary_df['สถานะ'].apply(get_short_status)
+wbs_summary_df['Network'] = wbs_summary_df['โครงข่าย'].fillna('-').astype(str).str.replace(r'\.0$', '', regex=True)
+
+wbs_summary_data = []
+for _, r in wbs_summary_df.fillna('-').iterrows():
+    wbs_summary_data.append({
+        'WBS': r['องค์ประกอบ WBS'],
+        'Network': r['Network'],
+        'ProjectName': r['ชื่อ'],
+        'Status': r['Status_Short'],
+        'PendingItems': r['PendingItems'],
+        'PayDate': r['วท.ชำระ'],
+        'BasicStart': r['Basic strt'],
+        'Branch': r['Branch'],
+        'Supervisor': r['Supervisor'],
+        'Team': r['Team']
+    })
+
+demand_details = pd.merge(df_demand_pending, stock_summary, on='วัสดุ', how='left').fillna(0)
+demand_details = pd.merge(demand_details, mat_desc, on='วัสดุ', how='left').fillna('-ไม่ระบุ-')
+demand_details['Balance'] = demand_details['Stock'] - demand_details['ปริมาณผลต่าง']
+demand_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'ปริมาณผลต่าง': 'Qty', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
+demand_details_data = demand_details[['WBS', 'วัสดุ', 'MatDesc', 'Qty', 'Stock', 'Balance']].to_dict(orient='records')
+
 # ==========================================
-# 4. จัดการ ME2N รับเข้าและจัดสรร
+# จัดการ ME2N รับเข้าและจัดสรร
 # ==========================================
 if not df_me2n.empty:
     df_me2n_in = df_me2n[df_me2n['โรงงาน'] == 'D060'].copy()
@@ -222,7 +265,7 @@ else:
     alloc_details = pd.DataFrame(); alloc_plants = []
 
 # ==========================================
-# 5. จัดการ ME2N1 & ดึงวันที่ส่งมอบ
+# จัดการ ME2N1 & ดึงวันที่ส่งมอบ
 # ==========================================
 me2n1_due_dates = {}
 if not df_me2n1.empty:
@@ -252,7 +295,7 @@ else:
     me2n1_details = pd.DataFrame(); me2n1_vendors = []
 
 # ==========================================
-# 6. อ่านไฟล์ N.txt (ดึงชื่องบไปใช้)
+# อ่านไฟล์ N.txt (ดึงชื่องบไปใช้)
 # ==========================================
 wbs_names_map = {}
 try:
@@ -271,7 +314,7 @@ for line in lines:
             if w and name: wbs_names_map[w] = name
 
 # ==========================================
-# 7. จัดการไฟล์งบเงิน (C.txt, I.txt, P.txt)
+# จัดการไฟล์งบเงิน (C.txt, I.txt, P.txt)
 # ==========================================
 budget_data = []
 def process_budget_file(file_path, file_type):
@@ -304,7 +347,7 @@ process_budget_file(file_budget_i, 'I')
 process_budget_file(file_budget_p, 'P')
 
 # ==========================================
-# 8. จัดการรายการจัดซื้อ (z005.txt และ n-z005.txt)
+# จัดการรายการจัดซื้อ (z005.txt และ n-z005.txt)
 # ==========================================
 purchase_data = []
 vendor_map = {}
@@ -364,12 +407,16 @@ for line in lines:
                     'DueDate': due_date_str, 'OverdueDays': overdue_days
                 })
 
-# 9. บันทึกข้อมูล
+# ==========================================
+# บันทึกเป็น data.js ทั้งหมด!
+# ==========================================
 tz_th = timezone(timedelta(hours=7))
 update_time = datetime.now(tz_th).strftime("%d/%m/%Y เวลา %H:%M น.")
 
 js_content = f"""// ไฟล์นี้ถูกสร้างอัตโนมัติจาก Python (ห้ามแก้ไขด้วยมือ)
 const lastUpdated = "{update_time}";
+const wbsSummaryData = {json.dumps(wbs_summary_data)};
+const demandDetailsData = {json.dumps(demand_details_data)};
 const pieRawData = {json.dumps(pie_summary.to_dict(orient='records'))};
 const mainData = {json.dumps(final_df.to_dict(orient='records'))};
 const projectGroups = {json.dumps(project_cols)};
