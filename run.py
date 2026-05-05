@@ -73,7 +73,7 @@ def ensure_cols(df, cols, default_val='-'):
 # อ่านไฟล์และจัดคอลัมน์ให้ครบ 100% 
 # ------------------------------------------
 df_stock = read_sap_txt(file_mb52)
-df_stock.rename(columns={'Plnt': 'โรงงาน', 'SLoc': 'ที่เก็บสินค้า'}, inplace=True)
+df_stock.rename(columns={'Plnt': 'โรงงาน', 'SLoc': 'ที่เก็บสินค้า'}, inplace=True, errors='ignore')
 df_stock = ensure_cols(df_stock, ['วัสดุ', 'คำอธิบายวัสดุ', 'โรงงาน', 'ที่เก็บสินค้า', 'ที่ใช้ได้'], 0)
 df_stock['ที่ใช้ได้'] = df_stock['ที่ใช้ได้'].apply(parse_sap_num)
 
