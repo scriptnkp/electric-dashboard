@@ -111,9 +111,30 @@ alloc_active = df_me2n_out[df_me2n_out['ยังจะถูกส่งมอ�
 alloc_details = alloc_active[['เอกสารการจัดซื้อ', 'โรงงาน', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
 alloc_plants = sorted([str(v) for v in alloc_active['โรงงาน'].unique() if str(v) != '-ไม่ระบุ-'])
 
-# 5. จัดการ ME2N1
+# 5. จัดการ ME2N1 & ดึงวันที่ส่งมอบ
+me2n1_due_dates = {} # ไว้เก็บวันที่ส่งมอบเพื่อใช้กับ z005
 try:
     df_me2n1 = pd.read_excel(file_me2n1)
+    
+    # ดึงวันที่ส่งมอบจาก ME2N1 มาเก็บไว้ใน Dictionary
+    if 'วันที่ส่งมอบ' in df_me2n1.columns and 'เอกสารการจัดซื้อ' in df_me2n1.columns:
+        for _, r in df_me2n1.iterrows():
+            po_id = str(r['เอกสารการจัดซื้อ']).split('.')[0].strip()
+            mat_id = str(r.get('วัสดุ', '')).strip()
+            date_val = r['วันที่ส่งมอบ']
+            
+            if pd.notna(date_val):
+                try:
+                    d_obj = pd.to_datetime(date_val)
+                    d_str = d_obj.strftime('%d.%m.%Y')
+                    # แมปด้วยเลข PO 
+                    me2n1_due_dates[po_id] = (d_str, d_obj)
+                    # แมปด้วยเลข PO + รหัสวัสดุ (เพื่อความแม่นยำขึ้นในกรณีมีหลายรายการ)
+                    if mat_id:
+                        me2n1_due_dates[f"{po_id}_{mat_id}"] = (d_str, d_obj)
+                except:
+                    pass
+
     df_me2n1_dan = df_me2n1[df_me2n1['กลุ่มการจัดซื้อ'] == 'DAN'].copy()
     df_me2n1_dan['ยังจะถูกส่งมอบ (ปริมาณ)'] = pd.to_numeric(df_me2n1_dan['ยังจะถูกส่งมอบ (ปริมาณ)'], errors='coerce').fillna(0)
     df_me2n1_dan['ที่เก็บสินค้า'] = df_me2n1_dan['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
@@ -124,6 +145,7 @@ try:
     me2n1_details = me2n1_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']]
     me2n1_vendors = sorted([str(v) for v in me2n1_active['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'].unique() if str(v) != '-ไม่ระบุ-'])
 except Exception as e:
+    print(f"Warning: ME2N1 error: {e}")
     me2n1_details = pd.DataFrame(); me2n1_vendors = []
 
 # ==========================================
@@ -196,7 +218,7 @@ process_budget_file(file_budget_i, 'I')
 process_budget_file(file_budget_p, 'P')
 
 # ==========================================
-# 8. จัดการรายการจัดซื้อ (บวกวันครบกำหนดเพิ่ม 30 วัน)
+# 8. จัดการรายการจัดซื้อ (หาจาก z005 ดึงวันครบกำหนดจาก 13.ME2N1.xlsx)
 # ==========================================
 purchase_data = []
 
@@ -257,24 +279,20 @@ for line in lines:
                 amount = qty * price
                 company_name = vendor_map.get(vendor, vendor) if vendor else '-'
                 
-                # ระบบคำนวณวันครบกำหนด (PO Date + 30 วัน)
-                overdue_days = '-'
                 due_date_str = '-'
+                overdue_days = '-'
                 
-                if po_date_str:
-                    try:
-                        po_date = datetime.strptime(po_date_str, '%d.%m.%Y')
-                        due_date = po_date + timedelta(days=30)
-                        due_date_str = due_date.strftime('%d.%m.%Y')
-                        
-                        # คำนวณวันเกินกำหนด
-                        diff = (current_date - due_date).days
+                # ระบบดึงวันครบกำหนดจากไฟล์ 13.ME2N1.xlsx
+                if doc_type == 'PO':
+                    # ค้นหาด้วย PO + Material ก่อน ถ้าไม่เจอหาด้วย PO อย่างเดียว
+                    due_info = me2n1_due_dates.get(f"{doc_num}_{mat}", me2n1_due_dates.get(doc_num))
+                    if due_info:
+                        due_date_str, due_date_obj = due_info
+                        diff = (current_date - due_date_obj).days
                         if diff > 0:
                             overdue_days = diff
                         else:
                             overdue_days = 0 # ยังไม่เกินกำหนด
-                    except:
-                        pass
                 
                 purchase_data.append({
                     'WBS': wbs,
