@@ -73,12 +73,12 @@ def ensure_cols(df, cols, default_val='-'):
 # อ่านไฟล์และจัดคอลัมน์ให้ครบ 100% 
 # ------------------------------------------
 df_stock = read_sap_txt(file_mb52)
-df_stock.rename(columns={'Plnt': 'โรงงาน', 'SLoc': 'ที่เก็บสินค้า'}, inplace=True, errors='ignore')
+df_stock.rename(columns={'Plnt': 'โรงงาน', 'SLoc': 'ที่เก็บสินค้า'}, inplace=True)
 df_stock = ensure_cols(df_stock, ['วัสดุ', 'คำอธิบายวัสดุ', 'โรงงาน', 'ที่เก็บสินค้า', 'ที่ใช้ได้'], 0)
 df_stock['ที่ใช้ได้'] = df_stock['ที่ใช้ได้'].apply(parse_sap_num)
 
 df_demand = read_sap_txt(file_zmb25)
-df_demand.rename(columns={'ปริมาณต่าง': 'ปริมาณผลต่าง'}, inplace=True, errors='ignore')
+df_demand.rename(columns={'ปริมาณต่าง': 'ปริมาณผลต่าง'}, inplace=True)
 df_demand = ensure_cols(df_demand, ['วัสดุ', 'คำอธิบายวัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง'], 0)
 df_demand['ปริมาณผลต่าง'] = df_demand['ปริมาณผลต่าง'].apply(parse_sap_num)
 
@@ -88,11 +88,11 @@ df_proj = ensure_cols(df_proj, ['องค์ประกอบ WBS', 'ชื่
 renames_me2n = {'รง.': 'โรงงาน', 'ผู้ขาย/โรงงานจัดหา': 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'SLoc': 'ที่เก็บสินค้า', 'เอกสารซื้อ': 'เอกสารการจัดซื้อ', 'To be del.': 'ยังจะถูกส่งมอบ (ปริมาณ)', 'PGr': 'กลุ่มการจัดซื้อ', 'วันส่งมอบ': 'วันที่ส่งมอบ'}
 
 df_me2n = read_sap_txt(file_me2n)
-df_me2n.rename(columns=renames_me2n, inplace=True, errors='ignore')
+df_me2n.rename(columns=renames_me2n, inplace=True)
 df_me2n = ensure_cols(df_me2n, ['โรงงาน', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'เอกสารการจัดซื้อ', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'กลุ่มการจัดซื้อ', 'วันที่ส่งมอบ', 'วัสดุ', 'ข้อความสั้น', 'ข้อความส่วนหัว'])
 
 df_me2n1 = read_sap_txt(file_me2n1)
-df_me2n1.rename(columns=renames_me2n, inplace=True, errors='ignore')
+df_me2n1.rename(columns=renames_me2n, inplace=True)
 df_me2n1 = ensure_cols(df_me2n1, ['โรงงาน', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'เอกสารการจัดซื้อ', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'กลุ่มการจัดซื้อ', 'วันที่ส่งมอบ', 'วัสดุ', 'ข้อความสั้น', 'ข้อความส่วนหัว'])
 
 cat_map = {'1-00-001': 'ผลิตภัณฑ์คอนกรีต', '1-02-001': 'สายไฟ', '1-03-000': 'ลูกถ้วย', '1-04-000': 'แก้ไฟ', '1-05-000': 'หม้อแปลง'}
@@ -174,7 +174,7 @@ mat_desc = pd.concat([df_demand[['วัสดุ', 'คำอธิบายว
 demand_details = pd.merge(df_demand_pending, stock_summary, on='วัสดุ', how='left').fillna(0)
 demand_details = pd.merge(demand_details, mat_desc, on='วัสดุ', how='left').fillna('-ไม่ระบุ-')
 demand_details['Balance'] = demand_details['Stock'] - demand_details['ปริมาณผลต่าง']
-demand_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'ปริมาณผลต่าง': 'Qty', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True, errors='ignore')
+demand_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'ปริมาณผลต่าง': 'Qty', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 demand_details_data = demand_details[['WBS', 'วัสดุ', 'MatDesc', 'Qty', 'Stock', 'Balance']].to_dict(orient='records')
 
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
@@ -197,7 +197,7 @@ wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประก�
 wbs_details = pd.merge(wbs_details, df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount'), on='องค์ประกอบ WBS', how='left').fillna(0)
 wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'คำอธิบายวัสดุ', 'Stock', 'Balance']], on='วัสดุ', how='left').fillna('-')
 wbs_details['Status_Short'] = wbs_details['สถานะ'].apply(get_short_status)
-wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True, errors='ignore')
+wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 wbs_details['Network'] = wbs_details['Network'].fillna('-').astype(str).str.replace(r'\.0$', '', regex=True)
 
 # ==========================================
@@ -381,4 +381,3 @@ const purchaseData = {json.dumps(purchase_data)};
 
 with open('data.js', 'w', encoding='utf-8') as f: f.write(js_content)
 print(f"สร้างไฟล์ data.js สำเร็จ! (อัปเดตข้อมูลเมื่อ: {update_time})")
-
