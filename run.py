@@ -4,9 +4,9 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
-# 1. ตั้งค่าไฟล์ (เปลี่ยน 6.mb52 เป็น .txt)
-file_mb52 = '6.mb52.txt'       # <--- เปลี่ยนเป็น txt แล้ว
-file_zmb25 = '11.zmb25.XLSX'
+# 1. ตั้งค่าไฟล์
+file_mb52 = '6.mb52.txt'       
+file_zmb25 = '11.zmb25.txt'      # <--- เปลี่ยนเป็น txt แล้ว
 file_cn43n = '14.CN43N.xlsx'
 file_me2n = '12.ME2N.xlsx'
 file_me2n1 = '13.ME2N1.xlsx'
@@ -37,7 +37,7 @@ def read_sap_txt(filepath):
         if line.startswith('|'):
             parts = [p.strip() for p in line.split('|')[1:-1]]
             # ถ้าเป็นบรรทัดที่มีคำว่า วัสดุ ถือว่าเป็นหัวตาราง
-            if 'วัสดุ' in parts[0] or 'วัสดุ' in parts[1] or 'วัสดุ' in parts[2] or 'วัสดุ' in parts[6]:
+            if any('วัสดุ' in p for p in parts):
                 if not headers: headers = parts
             elif headers and len(parts) == len(headers):
                 data.append(parts)
@@ -46,25 +46,40 @@ def read_sap_txt(filepath):
         return pd.DataFrame(data, columns=headers)
     return pd.DataFrame()
 
+# ฟังก์ชันแปลงตัวเลข SAP (รองรับลูกน้ำ และเครื่องหมายลบด้านหลัง เช่น '1-')
+def parse_sap_num(x):
+    s = str(x).replace(',', '').strip()
+    if not s: return 0.0
+    if s.endswith('-'):
+        s = '-' + s[:-1]
+    try: return float(s)
+    except: return 0.0
+
 # ------------------------------------------
-# อ่านไฟล์ 6.mb52.txt 
+# อ่านไฟล์ 6.mb52.txt (สต็อก)
 # ------------------------------------------
 df_stock_raw = read_sap_txt(file_mb52)
 if not df_stock_raw.empty:
-    # แปลงชื่อคอลัมน์ให้ตรงกับที่โค้ดต้องการ
-    df_stock_raw.rename(columns={
-        'Plnt': 'โรงงาน',
-        'SLoc': 'ที่เก็บสินค้า'
-    }, inplace=True)
-    # แปลงตัวเลข
-    df_stock_raw['ที่ใช้ได้'] = pd.to_numeric(df_stock_raw['ที่ใช้ได้'].str.replace(',', ''), errors='coerce').fillna(0)
+    df_stock_raw.rename(columns={'Plnt': 'โรงงาน', 'SLoc': 'ที่เก็บสินค้า'}, inplace=True)
+    df_stock_raw['ที่ใช้ได้'] = df_stock_raw['ที่ใช้ได้'].apply(parse_sap_num)
     df_stock = df_stock_raw
 else:
     print("Warning: ไม่พบข้อมูลใน 6.mb52.txt")
     df_stock = pd.DataFrame(columns=['วัสดุ', 'คำอธิบายวัสดุ', 'โรงงาน', 'ที่เก็บสินค้า', 'ที่ใช้ได้'])
 
-# ส่วนไฟล์อื่นๆ ยังใช้แบบเดิมไปก่อนใน Step นี้
-df_demand = pd.read_excel(file_zmb25)
+# ------------------------------------------
+# อ่านไฟล์ 11.zmb25.txt (ความต้องการ)
+# ------------------------------------------
+df_demand_raw = read_sap_txt(file_zmb25)
+if not df_demand_raw.empty:
+    df_demand_raw.rename(columns={'ปริมาณต่าง': 'ปริมาณผลต่าง'}, inplace=True)
+    df_demand_raw['ปริมาณผลต่าง'] = df_demand_raw['ปริมาณผลต่าง'].apply(parse_sap_num)
+    df_demand = df_demand_raw
+else:
+    print("Warning: ไม่พบข้อมูลใน 11.zmb25.txt")
+    df_demand = pd.DataFrame(columns=['วัสดุ', 'คำอธิบายวัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง'])
+
+# ส่วนไฟล์อื่นๆ ยังใช้ Excel ไปก่อน
 df_proj = pd.read_excel(file_cn43n)
 df_me2n = pd.read_excel(file_me2n)
 
@@ -266,11 +281,12 @@ for line in lines:
         if len(parts) >= 21:
             wbs = parts[3].strip(); mat = parts[5].strip(); desc = parts[6].strip()
             pr_num = parts[7].strip(); po_num = parts[8].strip(); gr_ir = parts[10].strip()
-            def get_num(val):
-                try: return float(val.strip().replace(',', ''))
-                except: return 0.0
-            pr_qty = get_num(parts[13]); pr_price = get_num(parts[14])
-            po_date_str = parts[15].strip(); po_qty = get_num(parts[16]); po_price = get_num(parts[17])
+            
+            pr_qty = parse_sap_num(parts[13])
+            pr_price = parse_sap_num(parts[14])
+            po_date_str = parts[15].strip()
+            po_qty = parse_sap_num(parts[16])
+            po_price = parse_sap_num(parts[17])
             vendor = parts[20].strip()
             
             if gr_ir == '':
