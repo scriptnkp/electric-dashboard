@@ -24,6 +24,9 @@
         .link-text { color: #3498db; text-decoration: underline; cursor: pointer; font-weight: bold; padding: 2px 8px; border-radius: 4px; transition: 0.2s;}
         .link-text:hover { background-color: #3498db; color: white; text-decoration: none;}
 
+        .link-mat { color: #8e44ad; text-decoration: underline; cursor: pointer; font-weight: bold; padding: 2px 8px; border-radius: 4px; transition: 0.2s;}
+        .link-mat:hover { background-color: #8e44ad; color: white; text-decoration: none;}
+
         /* สไตล์ Modal (หน้าต่างป๊อปอัป) */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(2px);}
         .modal-overlay.active { display: flex; }
@@ -47,7 +50,7 @@
     </div>
 
     <div class="container">
-        <div class="header-title">📋 สรุปความต้องการวัสดุ</div>
+        <div class="header-title" id="topAnchor">📋 สรุปความต้องการวัสดุ</div>
 
         <!-- ชุดกรองข้อมูล (Dropdowns) -->
         <div class="filter-group" style="display:flex; gap:15px; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e0e6ed;">
@@ -68,7 +71,7 @@
         <!-- การ์ดแสดงยอด WBS -->
         <div style="display: flex; gap: 20px; margin-bottom: 20px;">
             <div class="card-green">
-                <div style="font-size: 14px; color: #7f8c8d; font-weight: bold; margin-bottom: 5px;">📝 ยอดรวม WBS ค้างจ่ายพัสดุ (ตามตัวกรอง)</div>
+                <div id="wbsCountText" style="font-size: 14px; color: #7f8c8d; font-weight: bold; margin-bottom: 5px;">📝 ยอดรวม WBS ค้างจ่ายพัสดุ (ตามตัวกรอง)</div>
                 <div><span class="val-text" id="wbsCount">0</span> <span style="color:#7f8c8d; font-size:14px; font-weight:bold;">โครงการ</span></div>
             </div>
         </div>
@@ -128,7 +131,7 @@
         </div>
     </div>
 
-    <!-- Modal 2: ดู WBS ที่รอรับวัสดุชิ้นนี้ (กดจากตาราง 2) -->
+    <!-- Modal 2: ดู WBS ที่รอรับวัสดุชิ้นนี้ (กดจากตัวเลขในตาราง 2) -->
     <div id="matModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -154,15 +157,16 @@
 
 <script>
     let currentWBSList = [];
+    let activeMatFilter = ''; // ตัวแปรเก็บรหัสวัสดุที่ผู้ใช้กดคลิกในตารางที่ 2
 
     function init() {
         if (typeof lastUpdated !== 'undefined') document.getElementById('lastUpdatedText').innerText = lastUpdated;
         if (typeof wbsSummaryData === 'undefined' || typeof mainData === 'undefined') {
-            document.getElementById('wbsTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:red; padding:20px;">กำลังรอประมวลผลข้อมูล หรือไฟล์ data.js มีปัญหา...</td></tr>';
+            document.getElementById('wbsTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:red; padding:20px;">กำลังรอประมวลผลข้อมูล...</td></tr>';
             return;
         }
 
-        // 1. สร้างตัวเลือก Dropdown สำหรับ กฟฟ., ผู้ควบคุม, ทีมงาน
+        // 1. สร้างตัวเลือก Dropdown
         const branches = [...new Set(wbsSummaryData.map(item => item.Branch))].sort();
         const supervisors = [...new Set(wbsSummaryData.map(item => item.Supervisor))].filter(s => s !== '-').sort();
         const teams = [...new Set(wbsSummaryData.map(item => item.Team))].filter(t => t !== '-').sort();
@@ -175,18 +179,33 @@
         supervisors.forEach(s => supSel.appendChild(new Option(s, s)));
         teams.forEach(t => tmSel.appendChild(new Option(t, t)));
 
-        // 2. สร้างหัวตารางที่ 2 (ลบคอลัมน์หมวดหมู่ออก)
+        // 2. สร้างหัวตารางที่ 2 
         let thHtml = `<tr>
-            <th style="min-width:140px;">รหัสวัสดุ <br><span style="font-size:11px; color:#f1c40f;">(กดดู WBS ที่รอรับของ)</span></th>
+            <th style="min-width:140px;">รหัสวัสดุ <br><span style="font-size:11px; color:#f1c40f;">(คลิกเพื่อกรอง WBS ด้านบน)</span></th>
             <th style="min-width:300px;">คำอธิบายวัสดุ</th>`;
         projectGroups.forEach(g => { thHtml += `<th>${g}</th>`; });
-        thHtml += `<th style="background-color:#d35400;">รวมความต้องการ</th>
+        thHtml += `<th style="background-color:#d35400;">รวมความต้องการ<br><span style="font-size:11px; color:#f1c40f;">(คลิกดูรายละเอียด)</span></th>
                    <th style="background-color:#27ae60;">สต็อก D060</th>
                    <th style="background-color:#2980b9;">ขาด/เหลือ</th></tr>`;
         document.getElementById('matHead').innerHTML = thHtml;
 
         applyFilters();
-        renderTable2(); // โหลดตารางที่ 2 (ข้อมูลรวมทั้งหมด)
+        renderTable2();
+    }
+
+    // ฟังก์ชันเชื่อมตาราง 2 ไป 1 (เมื่อคลิกรหัสวัสดุ)
+    function filterTable1ByMat(matCode) {
+        if (activeMatFilter === matCode) {
+            activeMatFilter = ''; // กดซ้ำ = ยกเลิกการกรอง
+        } else {
+            activeMatFilter = matCode; // กดครั้งแรก = กรอง
+        }
+        applyFilters();
+        renderTable2(); // รีเฟรชตาราง 2 เพื่อให้แถบสีเหลืองโชว์ว่ากำลังเลือกบรรทัดไหนอยู่
+        
+        if(activeMatFilter !== '') {
+            document.getElementById('topAnchor').scrollIntoView({behavior: 'smooth'}); // เลื่อนจอขึ้นไปดูตาราง 1
+        }
     }
 
     function applyFilters() {
@@ -194,16 +213,29 @@
         const sup = document.getElementById('supFilter').value;
         const tm = document.getElementById('teamFilter').value;
 
-        // กรองข้อมูลตารางที่ 1
+        // กรองด้วย Dropdown
         currentWBSList = wbsSummaryData.filter(r => {
             return (br === 'ALL' || r.Branch === br) &&
                    (sup === 'ALL' || r.Supervisor === sup) &&
                    (tm === 'ALL' || r.Team === tm);
         });
 
+        // ถ้ามีการคลิกเลือกรหัสวัสดุจากตารางที่ 2 ให้กรองเพิ่ม
+        if (activeMatFilter !== '') {
+            const wbsWithMat = new Set((wbsDataByMat[activeMatFilter] || []).map(x => x.WBS));
+            currentWBSList = currentWBSList.filter(r => wbsWithMat.has(r.WBS));
+        }
+
         document.getElementById('wbsCount').innerText = currentWBSList.length;
 
-        // วาดตารางที่ 1 (ลบ กฟฟ. ออกแล้ว)
+        // อัปเดตข้อความหัวตารางให้รู้ว่ากำลังกรองวัสดุอยู่
+        let filterText = '';
+        if (activeMatFilter !== '') {
+            filterText = `<span style="color:#e74c3c; background:#fadbd8; padding:3px 8px; border-radius:10px; margin-left:10px; font-size:12px;">🔍 กรองเฉพาะที่ใช้วัสดุ: ${activeMatFilter} (คลิกรหัสเดิมอีกครั้งเพื่อยกเลิก)</span>`;
+        }
+        document.getElementById('wbsCountText').innerHTML = `📝 ยอดรวม WBS ค้างจ่ายพัสดุ (ตามตัวกรอง) ${filterText}`;
+
+        // วาดตารางที่ 1
         let wbsHtml = '';
         currentWBSList.forEach(r => {
             wbsHtml += `<tr>
@@ -224,23 +256,30 @@
     }
 
     function renderTable2() {
-        // วาดตารางที่ 2 (เวอร์ชันดั้งเดิม ลบหมวดหมู่ออก และกดรหัสวัสดุได้)
         let h = '';
         mainData.forEach(r => {
             let pgCols = '';
             projectGroups.forEach(g => {
                 let val = r[g] || 0;
-                pgCols += `<td class="num-col">${val > 0 ? val.toLocaleString() : '-'}</td>`;
+                if(val > 0) {
+                    pgCols += `<td class="num-col"><span class="link-text" onclick="showMatDetails('${r['วัสดุ']}')">${val.toLocaleString()}</span></td>`;
+                } else {
+                    pgCols += `<td class="num-col" style="color:#bdc3c7;">-</td>`;
+                }
             });
             
             let balColor = r.Balance < 0 ? 'color: #e74c3c;' : 'color: #27ae60;';
-            h += `<tr>
+            let rowBg = (activeMatFilter === r['วัสดุ']) ? 'background-color: #fff3cd;' : ''; // ไฮไลท์สีเหลืองอ่อนถ้ากดเลือกอยู่
+
+            h += `<tr style="${rowBg}">
                 <td style="text-align:center; font-weight:bold;">
-                    <span class="link-text" onclick="showMatDetails('${r['วัสดุ']}')" title="คลิกดู WBS ที่เบิก">${r['วัสดุ']}</span>
+                    <span class="link-mat" onclick="filterTable1ByMat('${r['วัสดุ']}')" title="คลิกเพื่อกรองตาราง WBS ด้านบน">${r['วัสดุ']}</span>
                 </td>
                 <td>${r['คำอธิบายวัสดุ']}</td>
                 ${pgCols}
-                <td class="num-col" style="color:#d35400; font-weight:bold; background-color:#fdf2e9;">${r.Total_Demand.toLocaleString()}</td>
+                <td class="num-col" style="background-color:#fdf2e9;">
+                    <span class="link-text" style="color:#d35400;" onclick="showMatDetails('${r['วัสดุ']}')">${r.Total_Demand.toLocaleString()}</span>
+                </td>
                 <td class="num-col" style="color:#27ae60; font-weight:bold; background-color:#eafaf1;">${r.Stock.toLocaleString()}</td>
                 <td class="num-col" style="${balColor} font-weight:bold; background-color:#ebf5fb;">${r.Balance.toLocaleString()}</td>
             </tr>`;
@@ -248,12 +287,11 @@
         document.getElementById('matTableBody').innerHTML = h || '<tr><td colspan="100%" style="text-align:center;">ไม่มีข้อมูล</td></tr>';
     }
 
-    // Modal 1: พัสดุใน WBS
+    // Modal 1: ดูพัสดุใน WBS
     function showWbsDetails(wbs) {
         document.getElementById('modalTitle').innerText = `📦 รายการวัสดุค้างจ่าย (WBS: ${wbs})`;
         const data = wbsDataByWbs[wbs] || [];
         let h = '';
-        
         data.forEach(r => {
             if(r.Qty > 0) { 
                 let balColor = r.Balance < 0 ? 'color: #e74c3c;' : 'color: #27ae60;';
@@ -266,12 +304,11 @@
                 </tr>`;
             }
         });
-        
         document.getElementById('wbsModalBodyContent').innerHTML = h || '<tr><td colspan="5" style="text-align:center; padding:20px;">ไม่พบรายการค้างจ่าย</td></tr>';
         document.getElementById('wbsModal').classList.add('active'); 
     }
 
-    // Modal 2: WBS ที่เบิกพัสดุตัวนี้ (ฟังก์ชันเดิมที่เอากลับมา)
+    // Modal 2: ดู WBS ที่รอรับพัสดุชิ้นนี้ (กดจากตัวเลข)
     function showMatDetails(matCode) {
         let desc = mainData.find(m => m['วัสดุ'] === matCode)?.['คำอธิบายวัสดุ'] || '';
         document.getElementById('matModalTitle').innerText = `📋 WBS ที่ต้องการ: ${matCode} ${desc}`;
@@ -295,7 +332,6 @@
         document.getElementById('matModal').classList.add('active');
     }
 
-    // ฟังก์ชันสำหรับปิด Modal (ใช้ร่วมกัน)
     function closeModal(modalId) {
         document.getElementById(modalId).classList.remove('active');
     }
