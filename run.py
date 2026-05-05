@@ -381,3 +381,4 @@ const purchaseData = {json.dumps(purchase_data)};
 
 with open('data.js', 'w', encoding='utf-8') as f: f.write(js_content)
 print(f"สร้างไฟล์ data.js สำเร็จ! (อัปเดตข้อมูลเมื่อ: {update_time})")
+
