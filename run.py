@@ -171,8 +171,11 @@ for _, r in wbs_summary_df.iterrows():
 
 # จัดการตารางที่ 2 (รายละเอียดพัสดุ)
 demand_details = pd.merge(df_demand_pending, stock_summary, on='วัสดุ', how='left').fillna(0)
+# เพิ่มชื่อวัสดุ
+mat_desc_map = pd.concat([df_demand[['วัสดุ', 'คำอธิบายวัสดุ']], df_stock[['วัสดุ', 'คำอธิบายวัสดุ']]]).drop_duplicates(subset=['วัสดุ']).dropna()
+demand_details = pd.merge(demand_details, mat_desc_map, on='วัสดุ', how='left').fillna('-ไม่ระบุ-')
+
 demand_details['Balance'] = demand_details['Stock'] - demand_details['ปริมาณผลต่าง']
-# ตอนนี้เราป้องกันบั๊กโดยไม่ไปดึงชื่อคอลัมน์ซ้ำซ้อนแล้ว
 demand_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'ปริมาณผลต่าง': 'Qty', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 demand_details = ensure_cols(demand_details, ['WBS', 'วัสดุ', 'MatDesc', 'Qty', 'Stock', 'Balance'])
 demand_details_data = demand_details[['WBS', 'วัสดุ', 'MatDesc', 'Qty', 'Stock', 'Balance']].to_dict(orient='records')
@@ -184,9 +187,8 @@ project_cols = [col for col in pivot_demand.columns if col != 'วัสดุ']
 if project_cols: pivot_demand['Total_Demand'] = pivot_demand[project_cols].sum(axis=1)
 else: pivot_demand['Total_Demand'] = 0
 
-mat_desc = pd.concat([df_demand[['วัสดุ', 'คำอธิบายวัสดุ']], df_stock[['วัสดุ', 'คำอธิบายวัสดุ']]]).drop_duplicates(subset=['วัสดุ']).dropna()
 final_df = pd.merge(pivot_demand, stock_summary, on='วัสดุ', how='outer').fillna(0)
-final_df = pd.merge(final_df, mat_desc, on='วัสดุ', how='left').fillna('-ไม่ระบุ-')
+final_df = pd.merge(final_df, mat_desc_map, on='วัสดุ', how='left').fillna('-ไม่ระบุ-')
 final_df = ensure_cols(final_df, ['Stock', 'Total_Demand'], 0)
 final_df['Balance'] = final_df['Stock'] - final_df['Total_Demand']
 final_df['Category'] = final_df['วัสดุ'].apply(get_category)
