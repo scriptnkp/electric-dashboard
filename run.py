@@ -4,7 +4,7 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
-# 1. ตั้งค่าไฟล์เป็น .txt ทั้งหมด 100% 🚀
+# 1. ตั้งค่าไฟล์เป็น .txt ทั้งหมด 100%
 file_mb52 = '6.mb52.txt'       
 file_zmb25 = '11.zmb25.txt'      
 file_cn43n = '14.CN43N.txt'     
@@ -20,7 +20,7 @@ file_n_z005 = 'n-z005.txt'
 print("กำลังอ่านไฟล์ TXT ทั้งหมด...")
 
 # ==========================================
-# ฟังก์ชันช่วยอ่านไฟล์ Txt และจัดการฟอร์แมต SAP
+# ฟังก์ชันช่วยอ่านไฟล์ Txt และแก้ปัญหาเครื่องหมาย | หลุดในข้อความ
 # ==========================================
 def read_sap_txt(filepath):
     data = []
@@ -39,14 +39,28 @@ def read_sap_txt(filepath):
             if not headers:
                 # ตรวจจับหัวตาราง
                 if any(k in p for p in parts for k in ['วัสดุ', 'องค์ประกอบ WBS', 'รง.', 'Lev']):
-                    headers = parts
-            elif headers and len(parts) == len(headers):
+                    headers = [h.strip() for h in parts]
+            elif headers:
                 if not parts[0].startswith('---'):
-                    data.append(parts)
-                    
+                    if len(parts) == len(headers):
+                        data.append(parts)
+                    elif len(parts) > len(headers):
+                        # ซ่อมแซมบรรทัดที่มี | หลุดมาในข้อความ
+                        idx = -1
+                        if 'ข้อความส่วนหัว' in headers:
+                            idx = headers.index('ข้อความส่วนหัว')
+                        elif 'ชื่อ' in headers:
+                            idx = headers.index('ชื่อ')
+                            
+                        if idx != -1:
+                            extra = len(parts) - len(headers)
+                            merged = ' | '.join(parts[idx : idx + extra + 1])
+                            new_parts = parts[:idx] + [merged] + parts[idx + extra + 1:]
+                            if len(new_parts) == len(headers):
+                                data.append(new_parts)
+                                
     if headers and data:
         df = pd.DataFrame(data, columns=headers)
-        df.columns = df.columns.str.strip()
         return df
     return pd.DataFrame()
 
@@ -276,7 +290,6 @@ def process_budget_file(file_path, file_type):
                     show = False
                     if 'NPN' in wbs: show = True
                     elif file_type == 'C' and ('AED' in wbs or 'POP' in wbs): show = True
-                    
                     if col_remain_11 > 0 and show:
                         budget_data.append({
                             'WBS': wbs, 'Project_Name': wbs_names_map.get(wbs, '-'),
@@ -337,15 +350,14 @@ for line in lines:
                 price = po_price if has_po and po_price > 0 else pr_price
                 amount = qty * price
                 company_name = vendor_map.get(vendor, vendor) if vendor else '-'
-                
                 due_date_str = '-'; overdue_days = '-'
+                
                 if doc_type == 'PO':
                     due_info = me2n1_due_dates.get(f"{doc_num}_{mat}", me2n1_due_dates.get(doc_num))
                     if due_info:
                         due_date_str, due_date_obj = due_info
                         diff = (current_date - due_date_obj).days
                         overdue_days = diff if diff > 0 else 0
-                
                 purchase_data.append({
                     'WBS': wbs, 'Company': company_name, 'DocNum': doc_num, 'DocType': doc_type, 'Mat': mat,
                     'Desc': desc, 'Qty': qty, 'Amount': amount, 'PoDate': po_date_str if po_date_str else '-',
