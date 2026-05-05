@@ -65,7 +65,7 @@
                         <th style="min-width: 300px;">คำอธิบายวัสดุ</th>
                         <th>จำนวน</th>
                         <th style="min-width: 120px;">วันที่ทำสัญญา PO</th>
-                        <th style="min-width: 130px;">วันครบกำหนด<br>(+30 วัน)</th>
+                        <th style="min-width: 130px;">วันครบกำหนด</th>
                         <th>สถานะจัดส่ง</th>
                     </tr>
                 </thead>
@@ -131,7 +131,7 @@
             } else if (overdueText === 0) {
                 overdueText = `<span style="color:#27ae60; font-weight:bold;">ยังไม่ถึงกำหนด</span>`;
             } else {
-                overdueText = '-';
+                overdueText = '-'; // สำหรับ PR หรืออันที่หาวันที่ใน 13.ME2N1.xlsx ไม่เจอ
             }
 
             h += `<tr>
