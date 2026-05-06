@@ -15,7 +15,7 @@
         
         .header-title { display: flex; align-items: center; gap: 10px; margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 22px; font-weight: bold;}
         .card-green { background-color: #e8f8f5; border-left: 6px solid #1abc9c; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex: 1; }
-        .val-text { font-size: 24px; font-weight: bold; color: #16a085; }
+        .val-text { font-size: 28px; font-weight: bold; color: #16a085; }
         .num-col { text-align: right; }
         
         .badge-status { background-color: #34495e; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
@@ -78,6 +78,29 @@
             height: 32px;
             font-size: 13px;
         }
+
+        /* ปุ่มคลิกงบ (Badge) */
+        .badge-click {
+            background-color: #ffffff;
+            border: 1px solid #1abc9c;
+            color: #16a085;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: 0.2s;
+            display: inline-block;
+        }
+        .badge-click:hover {
+            background-color: #1abc9c;
+            color: #ffffff;
+        }
+        .badge-click.active {
+            background-color: #1abc9c;
+            color: #ffffff;
+        }
     </style>
 </head>
 <body>
@@ -114,14 +137,14 @@
                 <select id="categoryFilter" onchange="applyFilters()"><option value="ALL">✅ ทุกประเภท</option></select>
             </div>
             <div>
-                <label>💰 งบ (เลือกหลายรายการ): </label>
+                <label>💰 งบ: </label>
                 <div class="dropdown-check-list" id="budgetDropdown">
                     <span class="anchor" onclick="toggleDropdown('budgetDropdown')">✅ ทั้งหมด</span>
                     <div class="items" id="budgetDropdownItems"></div>
                 </div>
             </div>
             <div>
-                <label>📦 รก.คงเหลือ (จำนวนรายการ): </label>
+                <label>📦 รก.คงเหลือ: </label>
                 <div class="dropdown-check-list" id="pendDropdown">
                     <span class="anchor" onclick="toggleDropdown('pendDropdown')">✅ ทั้งหมด</span>
                     <div class="items" id="pendDropdownItems"></div>
@@ -132,10 +155,19 @@
             </div>
         </div>
 
+        <!-- การ์ดแสดงยอด WBS และปุ่มแยกประเภทงบ -->
         <div style="display: flex; gap: 20px; margin-bottom: 20px;">
-            <div class="card-green">
-                <div id="wbsCountText" style="font-size: 14px; color: #7f8c8d; font-weight: bold; margin-bottom: 5px;">📝 ยอดรวม WBS ค้างจ่ายพัสดุ (ตามตัวกรอง)</div>
-                <div><span class="val-text" id="wbsCount">0</span> <span style="color:#7f8c8d; font-size:14px; font-weight:bold;">โครงการ</span></div>
+            <div class="card-green" style="flex: 1;">
+                <div id="wbsCountText" style="font-size: 14px; color: #7f8c8d; font-weight: bold; margin-bottom: 10px;">📝 ยอดรวม WBS ค้างจ่ายพัสดุ (ตามตัวกรอง)</div>
+                <div style="display: flex; align-items: center; flex-wrap: wrap;">
+                    <div style="margin-right: 20px;">
+                        <span class="val-text" id="wbsCount">0</span> 
+                        <span style="color:#7f8c8d; font-size:14px; font-weight:bold;">โครงการ</span>
+                    </div>
+                    <!-- ส่วนแยกจำนวนตามงบ (คลิกได้) -->
+                    <div id="wbsBreakdown" style="display: flex; gap: 8px; flex-wrap: wrap; border-left: 2px solid #a3e4d7; padding-left: 20px; min-height: 24px;">
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -242,13 +274,11 @@
     function init() {
         if (typeof lastUpdated !== 'undefined') document.getElementById('lastUpdatedText').innerText = lastUpdated;
         
-        // เช็คว่าไฟล์ data.js โหลดมาครบถ้วนสมบูรณ์หรือไม่ ถ้าไม่ จะขึ้นข้อความแจ้งเตือน
         if (typeof wbsSummaryData === 'undefined' || typeof demandDetailsData === 'undefined' || typeof mainData === 'undefined' || typeof projectGroups === 'undefined') {
-            document.getElementById('wbsTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:#e74c3c; padding:20px; font-weight:bold; font-size:16px;">⚠️ เซิร์ฟเวอร์กำลังอัปเดตข้อมูล หรือพบข้อผิดพลาด โปรดรอ 1-2 นาที แล้วกดรีเฟรชหน้าเว็บ (F5)</td></tr>';
+            document.getElementById('wbsTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:#e74c3c; padding:20px; font-weight:bold; font-size:16px;">⚠️ เซิร์ฟเวอร์กำลังอัปเดตข้อมูล โปรดรอสักครู่ แล้วกดรีเฟรชหน้าเว็บ (F5)</td></tr>';
             return;
         }
 
-        // 1. สร้าง Dropdown พื้นฐาน
         const branches = [...new Set(wbsSummaryData.map(item => item.Branch))].sort();
         const supervisors = [...new Set(wbsSummaryData.map(item => item.Supervisor))].filter(s => s !== '-').sort();
         const teams = [...new Set(wbsSummaryData.map(item => item.Team))].filter(t => t !== '-').sort();
@@ -264,20 +294,17 @@
         teams.forEach(t => tmSel.appendChild(new Option(t, t)));
         categories.forEach(c => catSel.appendChild(new Option(c, c)));
 
-        // 2. สร้าง Dropdown งบ
         const budgetItemsDiv = document.getElementById('budgetDropdownItems');
         (projectGroups || []).sort().forEach(g => {
             budgetItemsDiv.innerHTML += `<label><input type="checkbox" class="chk-budget" value="${g}" onchange="updateDropdownText('budgetDropdown', 'ทั้งหมด'); applyFilters();"> ${g}</label>`;
         });
 
-        // 3. สร้าง Dropdown รก.คงเหลือ (เลือกจากตัวเลขรายการ เช่น 1, 2, 3...)
         const pendingCounts = [...new Set(wbsSummaryData.map(item => item.PendingItems))].filter(p => p > 0).sort((a,b) => a - b);
         const pendItemsDiv = document.getElementById('pendDropdownItems');
         pendingCounts.forEach(p => {
             pendItemsDiv.innerHTML += `<label><input type="checkbox" class="chk-pend" value="${p}" onchange="updateDropdownText('pendDropdown', 'ทั้งหมด'); applyFilters();"> ${p} รายการ</label>`;
         });
 
-        // 4. สร้างหัวตารางที่ 2
         let thHtml = `<tr>
             <th style="min-width:140px;">รหัสวัสดุ <br><span style="font-size:11px; color:#f1c40f;">(คลิกเพื่อกรอง WBS)</span></th>
             <th style="min-width:300px;">คำอธิบายวัสดุ</th>`;
@@ -321,6 +348,22 @@
         }
     }
 
+    // ฟังก์ชันสำหรับคลิกที่ Badge งบ
+    function filterByBadge(grp) {
+        const checkboxes = document.querySelectorAll('.chk-budget');
+        let checkedBoxes = Array.from(checkboxes).filter(c => c.checked);
+        
+        // ถ้างบนี้ถูกเลือกไว้อยู่อันเดียวแล้ว (กดซ้ำ) = ยกเลิก
+        let isAlreadyOnlyChecked = (checkedBoxes.length === 1 && checkedBoxes[0].value === grp);
+
+        checkboxes.forEach(c => {
+            c.checked = isAlreadyOnlyChecked ? false : (c.value === grp);
+        });
+
+        updateDropdownText('budgetDropdown', 'ทั้งหมด');
+        applyFilters();
+    }
+
     function resetFilters() {
         document.getElementById('branchFilter').value = 'ALL';
         document.getElementById('supFilter').value = 'ALL';
@@ -358,13 +401,11 @@
         const selectedBudgets = Array.from(document.querySelectorAll('.chk-budget:checked')).map(c => c.value);
         const selectedPends = Array.from(document.querySelectorAll('.chk-pend:checked')).map(c => parseInt(c.value));
 
-        let baseWBSList = wbsSummaryData.filter(r => {
+        // สร้างฐาน WBS โดยข้ามเรื่องกรองงบไปก่อน เพื่อใช้คำนวณ Badge
+        let preBadgeWBSList = wbsSummaryData.filter(r => {
             let passBr = (br === 'ALL' || r.Branch === br);
             let passSup = (sup === 'ALL' || r.Supervisor === sup);
             let passTm = (tm === 'ALL' || r.Team === tm);
-            
-            let wbsGroup = getProjectGroup(r.WBS);
-            let passBudg = (selectedBudgets.length === 0 || selectedBudgets.includes(wbsGroup));
             let passPend = (selectedPends.length === 0 || selectedPends.includes(r.PendingItems));
 
             let passCat = true;
@@ -377,14 +418,45 @@
                 passCat = wbsCategories.includes(cat);
             }
 
-            return passBr && passSup && passTm && passBudg && passCat && passPend;
+            return passBr && passSup && passTm && passCat && passPend;
         });
 
-        currentWBSList = baseWBSList;
+        // เตรียมข้อมูลหากคลิก รหัสวัสดุ ในตารางที่ 2
+        let wbsWithMat = null;
         if (activeMatFilter !== '') {
-            const wbsWithMat = new Set(demandDetailsData.filter(d => d['วัสดุ'] === activeMatFilter && d.Qty > 0).map(x => x.WBS));
-            currentWBSList = baseWBSList.filter(r => wbsWithMat.has(r.WBS));
+            wbsWithMat = new Set(demandDetailsData.filter(d => d['วัสดุ'] === activeMatFilter && d.Qty > 0).map(x => x.WBS));
         }
+
+        // คำนวณ Badge (ป้ายคลิกได้)
+        let badgeSourceList = preBadgeWBSList.filter(r => {
+            if (wbsWithMat) return wbsWithMat.has(r.WBS);
+            return true;
+        });
+
+        let groupCounts = {};
+        badgeSourceList.forEach(r => {
+            let grp = getProjectGroup(r.WBS);
+            groupCounts[grp] = (groupCounts[grp] || 0) + 1;
+        });
+
+        let breakdownHtml = '';
+        Object.keys(groupCounts).sort().forEach(grp => {
+            let isActive = (selectedBudgets.length === 1 && selectedBudgets[0] === grp) ? 'active' : '';
+            breakdownHtml += `<span class="badge-click ${isActive}" onclick="filterByBadge('${grp}')">${grp} : ${groupCounts[grp]}</span>`;
+        });
+        document.getElementById('wbsBreakdown').innerHTML = breakdownHtml;
+
+        // กรอง Base สุดท้าย (นำงบมาคิดรวม เพื่อส่งให้ตาราง 2)
+        let baseWBSList = preBadgeWBSList.filter(r => {
+            let wbsGroup = getProjectGroup(r.WBS);
+            return (selectedBudgets.length === 0 || selectedBudgets.includes(wbsGroup));
+        });
+
+        // กรอง Current สุดท้าย (นำรหัสวัสดุมาคิดรวม เพื่อส่งให้ตาราง 1)
+        currentWBSList = baseWBSList.filter(r => {
+            if (wbsWithMat) return wbsWithMat.has(r.WBS);
+            return true;
+        });
 
         document.getElementById('wbsCount').innerText = currentWBSList.length;
 
@@ -452,7 +524,6 @@
 
         dynamicMainData.forEach(r => r.Balance = r.Stock - r.Total_Demand);
         
-        // เรียงตารางที่ 2 รหัสวัสดุจากน้อยไปมาก (รับประกันว่าไม่ error ตัวเลข)
         dynamicMainData.sort((a, b) => String(a['วัสดุ']).localeCompare(String(b['วัสดุ'])));
 
         let h = '';
