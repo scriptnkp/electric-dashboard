@@ -52,6 +52,7 @@
         .btn-reset { padding: 6px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: 32px; width: 100%; font-size: 13px;}
         .btn-reset:hover { background: #c0392b; }
 
+        /* จัดการเมนูไม่ให้ซ้อนกัน */
         .filter-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -95,7 +96,7 @@
     <div class="container">
         <div class="header-title" id="topAnchor">📋 สรุปความต้องการวัสดุ</div>
 
-        <!-- ชุดกรองข้อมูลแบบ Grid (เมนูไม่ซ้อน) -->
+        <!-- ชุดกรองข้อมูล (Grid Layout) -->
         <div class="filter-grid">
             <div>
                 <label>📍 กฟฟ.: </label>
@@ -122,12 +123,12 @@
                     </div>
                 </div>
             </div>
-            <div>
-                <label>📦 รก.คงเหลือ (จำนวนรายการ): </label>
-                <div class="dropdown-check-list" id="pendDropdown">
-                    <span class="anchor" onclick="toggleDropdown('pendDropdown')">✅ ทั้งหมด</span>
-                    <div class="items" id="pendDropdownItems">
-                        <!-- สร้างตัวเลือกจำนวนคงเหลือผ่าน JS -->
+            <div style="grid-column: span 2;">
+                <label>📦 รก.คงเหลือ (เลือกหลายรายการ): </label>
+                <div class="dropdown-check-list" id="matDropdown">
+                    <span class="anchor" onclick="toggleDropdown('matDropdown')">✅ ทั้งหมด</span>
+                    <div class="items" id="matDropdownItems">
+                        <!-- สร้างตัวเลือกวัสดุผ่าน JS -->
                     </div>
                 </div>
             </div>
@@ -136,6 +137,7 @@
             </div>
         </div>
 
+        <!-- การ์ดแสดงยอด WBS -->
         <div style="display: flex; gap: 20px; margin-bottom: 20px;">
             <div class="card-green">
                 <div id="wbsCountText" style="font-size: 14px; color: #7f8c8d; font-weight: bold; margin-bottom: 5px;">📝 ยอดรวม WBS ค้างจ่ายพัสดุ (ตามตัวกรอง)</div>
@@ -163,7 +165,7 @@
             </table>
         </div>
 
-        <h3 style="margin-bottom: 10px; color:#c0392b; border-top: 2px dashed #eee; padding-top: 15px;">📦 ตารางที่ 2: สรุปความต้องการวัสดุรวม (ตามตารางด้านบนเรียงรหัสวัสดุ)</h3>
+        <h3 style="margin-bottom: 10px; color:#c0392b; border-top: 2px dashed #eee; padding-top: 15px;">📦 ตารางที่ 2: สรุปความต้องการวัสดุรวม (ตามตารางด้านบน)</h3>
         <div class="table-wrapper" style="max-height: 70vh;">
             <table>
                 <thead id="matHead">
@@ -174,7 +176,7 @@
         </div>
     </div>
 
-    <!-- Modal 1 -->
+    <!-- Modal 1: ดูวัสดุค้างจ่ายของ WBS (กดจากตาราง 1) -->
     <div id="wbsModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -201,7 +203,7 @@
         </div>
     </div>
 
-    <!-- Modal 2 -->
+    <!-- Modal 2: ดู WBS ที่รอรับวัสดุชิ้นนี้ (กดจากตัวเลขในตาราง 2) -->
     <div id="matModal" class="modal-overlay">
         <div class="modal-content">
             <div class="modal-header">
@@ -274,21 +276,25 @@
             budgetItemsDiv.innerHTML += `<label><input type="checkbox" class="chk-budget" value="${g}" onchange="updateDropdownText('budgetDropdown', 'ทั้งหมด'); applyFilters();"> ${g}</label>`;
         });
 
-        // 3. สร้าง Dropdown รก.คงเหลือ (เลือกจากตัวเลขรายการ เช่น 1, 2, 3...)
-        const pendingCounts = [...new Set(wbsSummaryData.map(item => item.PendingItems))].filter(p => p > 0).sort((a,b) => a - b);
-        const pendItemsDiv = document.getElementById('pendDropdownItems');
-        pendingCounts.forEach(p => {
-            pendItemsDiv.innerHTML += `<label><input type="checkbox" class="chk-pend" value="${p}" onchange="updateDropdownText('pendDropdown', 'ทั้งหมด'); applyFilters();"> ${p} รายการ</label>`;
+        // 3. สร้าง Dropdown รก.คงเหลือ (รหัสวัสดุ)
+        const uniqueMats = new Map();
+        demandDetailsData.forEach(d => {
+            if(d.Qty > 0) uniqueMats.set(d['วัสดุ'], d.MatDesc);
+        });
+        const matItemsDiv = document.getElementById('matDropdownItems');
+        Array.from(uniqueMats.keys()).sort().forEach(code => {
+            let desc = uniqueMats.get(code);
+            matItemsDiv.innerHTML += `<label><input type="checkbox" class="chk-mat" value="${code}" onchange="updateDropdownText('matDropdown', 'ทั้งหมด'); applyFilters();"> <b>${code}</b> &nbsp; ${desc}</label>`;
         });
 
-        // 4. สร้างหัวตารางที่ 2
+        // 4. สร้างหัวตาราง 2
         let thHtml = `<tr>
             <th style="min-width:140px;">รหัสวัสดุ <br><span style="font-size:11px; color:#f1c40f;">(คลิกเพื่อกรอง WBS)</span></th>
             <th style="min-width:300px;">คำอธิบายวัสดุ</th>`;
         projectGroups.forEach(g => { thHtml += `<th>${g}</th>`; });
-        thHtml += `<th style="background-color:#d35400;">รวมความต้องการ<br><span style="font-size:11px; color:#f1c40f;">(คลิกตัวเลข)</span></th>
+        thHtml += `<th style="background-color:#d35400;">รวมความต้องการ<br><span style="font-size:11px; color:#f1c40f;">(คลิกดูรายละเอียด)</span></th>
                    <th style="background-color:#27ae60;">สต็อก D060</th>
-                   <th style="background-color:#2980b9;">ขาด/เหลือ<br><span style="font-size:11px; color:#f1c40f;">(คลิกตัวเลข)</span></th></tr>`;
+                   <th style="background-color:#2980b9;">ขาด/เหลือ<br><span style="font-size:11px; color:#f1c40f;">(คลิกดูรายละเอียด)</span></th></tr>`;
         document.getElementById('matHead').innerHTML = thHtml;
 
         applyFilters();
@@ -332,11 +338,11 @@
         document.getElementById('categoryFilter').value = 'ALL';
         
         document.querySelectorAll('.chk-budget').forEach(c => c.checked = false);
-        document.querySelectorAll('.chk-pend').forEach(c => c.checked = false);
+        document.querySelectorAll('.chk-mat').forEach(c => c.checked = false);
         
         activeMatFilter = ''; 
         updateDropdownText('budgetDropdown', 'ทั้งหมด');
-        updateDropdownText('pendDropdown', 'ทั้งหมด');
+        updateDropdownText('matDropdown', 'ทั้งหมด');
         
         applyFilters();
     }
@@ -360,8 +366,9 @@
         const cat = document.getElementById('categoryFilter').value;
 
         const selectedBudgets = Array.from(document.querySelectorAll('.chk-budget:checked')).map(c => c.value);
-        const selectedPends = Array.from(document.querySelectorAll('.chk-pend:checked')).map(c => parseInt(c.value));
+        const selectedMats = Array.from(document.querySelectorAll('.chk-mat:checked')).map(c => c.value);
 
+        // 1. กรองแบบครบทุกมิติ
         let baseWBSList = wbsSummaryData.filter(r => {
             let passBr = (br === 'ALL' || r.Branch === br);
             let passSup = (sup === 'ALL' || r.Supervisor === sup);
@@ -369,11 +376,11 @@
             
             let wbsGroup = getProjectGroup(r.WBS);
             let passBudg = (selectedBudgets.length === 0 || selectedBudgets.includes(wbsGroup));
-            let passPend = (selectedPends.length === 0 || selectedPends.includes(r.PendingItems));
-
+            
+            let requiredMats = demandDetailsData.filter(d => d.WBS === r.WBS && d.Qty > 0).map(d => d['วัสดุ']);
+            
             let passCat = true;
             if (cat !== 'ALL') {
-                let requiredMats = demandDetailsData.filter(d => d.WBS === r.WBS && d.Qty > 0).map(d => d['วัสดุ']);
                 let wbsCategories = requiredMats.map(mCode => {
                     let matInfo = mainData.find(m => m['วัสดุ'] === mCode);
                     return matInfo ? matInfo.Category : 'อื่นๆ';
@@ -381,9 +388,15 @@
                 passCat = wbsCategories.includes(cat);
             }
 
-            return passBr && passSup && passTm && passBudg && passCat && passPend;
+            let passMat = true;
+            if (selectedMats.length > 0) {
+                passMat = selectedMats.some(m => requiredMats.includes(m));
+            }
+
+            return passBr && passSup && passTm && passBudg && passCat && passMat;
         });
 
+        // 2. ถ้ากดรหัสจากตารางล่าง ให้กรองเพิ่ม
         currentWBSList = baseWBSList;
         if (activeMatFilter !== '') {
             const wbsWithMat = new Set(demandDetailsData.filter(d => d['วัสดุ'] === activeMatFilter && d.Qty > 0).map(x => x.WBS));
@@ -427,11 +440,9 @@
             if (activeWbsSet.has(d.WBS) && d.Qty > 0) {
                 let mat = d['วัสดุ'];
                 if (!matAgg[mat]) {
-                    // หากคำอธิบายวัสดุใน demand ไม่มี ให้ดึงจาก mainData เป็นก๊อกสอง
-                    let fallbackDesc = mainData.find(m => m['วัสดุ'] === mat)?.['คำอธิบายวัสดุ'] || d.MatDesc;
                     matAgg[mat] = {
                         'วัสดุ': mat,
-                        'คำอธิบายวัสดุ': fallbackDesc,
+                        'คำอธิบายวัสดุ': d.MatDesc,
                         'Stock': d.Stock,
                         'Total_Demand': 0
                     };
@@ -446,7 +457,10 @@
         });
 
         let dynamicMainData = Object.values(matAgg);
+        
+        // ถ้า Dropdown ประเภท หรือ รก.คงเหลือ เลือกไว้ ต้องกรองตารางล่างให้ตรงกัน
         const cat = document.getElementById('categoryFilter').value;
+        const selectedMats = Array.from(document.querySelectorAll('.chk-mat:checked')).map(c => c.value);
 
         if (cat !== 'ALL') {
             dynamicMainData = dynamicMainData.filter(m => {
@@ -454,11 +468,12 @@
                 return matInfo && matInfo.Category === cat;
             });
         }
+        if (selectedMats.length > 0) {
+            dynamicMainData = dynamicMainData.filter(m => selectedMats.includes(m['วัสดุ']));
+        }
 
         dynamicMainData.forEach(r => r.Balance = r.Stock - r.Total_Demand);
-        
-        // เรียงตารางที่ 2 รหัสวัสดุจากน้อยไปมาก 
-        dynamicMainData.sort((a, b) => a['วัสดุ'].localeCompare(b['วัสดุ']));
+        dynamicMainData.sort((a, b) => b.Total_Demand - a.Total_Demand);
 
         let h = '';
         dynamicMainData.forEach(r => {
@@ -495,6 +510,7 @@
 
     // Modal 1: ดูพัสดุใน WBS
     function showWbsDetails(wbs) {
+        // หาข้อมูล WBS เพื่อดึงชื่อและสถานะ
         let wbsInfo = currentWBSList.find(x => x.WBS === wbs) || {};
         let wbsName = wbsInfo.ProjectName || '';
         document.getElementById('modalTitle').innerHTML = `📦 รายการอุปกรณ์ใน WBS: <span style="color:#f1c40f;">${wbs}</span> <br><span style="font-size:14px; font-weight:normal;">${wbsName}</span>`;
@@ -527,8 +543,8 @@
     // Modal 2: ดู WBS ที่รอรับพัสดุชิ้นนี้ 
     function showMatDetails(matCode, groupName) {
         let desc = demandDetailsData.find(d => d['วัสดุ'] === matCode)?.MatDesc || '';
-        let titleSuffix = groupName === 'ALL' ? 'ทั้งหมด' : `งบ: ${groupName}`;
-        document.getElementById('matModalTitle').innerHTML = `📋 รายการ WBS <span style="background-color:white; color:#34495e; padding:2px 8px; border-radius:12px;">${titleSuffix}</span> ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${matCode} ${desc}</span>`;
+        let titleSuffix = groupName === 'ALL' ? 'ทั้งหมด' : `เฉพาะกลุ่ม: ${groupName}`;
+        document.getElementById('matModalTitle').innerHTML = `📋 รายการ WBS ที่ใช้อุปกรณ์: <b>${matCode}</b> <br><span style="font-size:14px; font-weight:normal; color:#f1c40f;">${desc} (${titleSuffix})</span>`;
         
         let data = wbsDataByMat[matCode] || [];
         let h = '';
@@ -548,7 +564,7 @@
                         </td>
                         <td style="text-align:center; color:#7f8c8d;">${r.Network}</td>
                         <td>${r.Project_Name}</td>
-                        <td class="num-col" style="font-weight:bold;">${r.Qty.toLocaleString()}</td>
+                        <td class="num-col" style="color:#c0392b; font-weight:bold;">${r.Qty.toLocaleString()}</td>
                         <td class="num-col" style="color:#e74c3c; font-weight:bold;">${r.PendingCount || '-'}</td>
                         <td style="text-align:center;"><span class="badge-status">${r.Status}</span></td>
                         <td style="text-align:center;">${r.Applicant}</td>
@@ -566,6 +582,8 @@
     function closeModal(modalId) {
         document.getElementById(modalId).classList.remove('active');
     }
+
+    window.onload = init;
 </script>
 </body>
 </html>
