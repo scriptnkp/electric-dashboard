@@ -120,7 +120,6 @@
                     <div class="items" id="budgetDropdownItems"></div>
                 </div>
             </div>
-            <!-- แก้ไข ID ตรงนี้ให้ถูกต้องเพื่อไม่ให้ระบบพัง -->
             <div>
                 <label>📦 รก.คงเหลือ (จำนวนรายการ): </label>
                 <div class="dropdown-check-list" id="pendDropdown">
@@ -242,8 +241,10 @@
 
     function init() {
         if (typeof lastUpdated !== 'undefined') document.getElementById('lastUpdatedText').innerText = lastUpdated;
-        if (typeof wbsSummaryData === 'undefined' || typeof demandDetailsData === 'undefined') {
-            document.getElementById('wbsTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:red; padding:20px;">กำลังรอประมวลผลข้อมูล...</td></tr>';
+        
+        // เช็คว่าไฟล์ data.js โหลดมาครบถ้วนสมบูรณ์หรือไม่ ถ้าไม่ จะขึ้นข้อความแจ้งเตือน
+        if (typeof wbsSummaryData === 'undefined' || typeof demandDetailsData === 'undefined' || typeof mainData === 'undefined' || typeof projectGroups === 'undefined') {
+            document.getElementById('wbsTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:#e74c3c; padding:20px; font-weight:bold; font-size:16px;">⚠️ เซิร์ฟเวอร์กำลังอัปเดตข้อมูล หรือพบข้อผิดพลาด โปรดรอ 1-2 นาที แล้วกดรีเฟรชหน้าเว็บ (F5)</td></tr>';
             return;
         }
 
@@ -265,7 +266,7 @@
 
         // 2. สร้าง Dropdown งบ
         const budgetItemsDiv = document.getElementById('budgetDropdownItems');
-        projectGroups.sort().forEach(g => {
+        (projectGroups || []).sort().forEach(g => {
             budgetItemsDiv.innerHTML += `<label><input type="checkbox" class="chk-budget" value="${g}" onchange="updateDropdownText('budgetDropdown', 'ทั้งหมด'); applyFilters();"> ${g}</label>`;
         });
 
@@ -280,7 +281,7 @@
         let thHtml = `<tr>
             <th style="min-width:140px;">รหัสวัสดุ <br><span style="font-size:11px; color:#f1c40f;">(คลิกเพื่อกรอง WBS)</span></th>
             <th style="min-width:300px;">คำอธิบายวัสดุ</th>`;
-        projectGroups.forEach(g => { thHtml += `<th>${g}</th>`; });
+        (projectGroups || []).forEach(g => { thHtml += `<th>${g}</th>`; });
         thHtml += `<th style="background-color:#d35400;">รวมความต้องการ<br><span style="font-size:11px; color:#f1c40f;">(คลิกตัวเลข)</span></th>
                    <th style="background-color:#27ae60;">สต็อก D060</th>
                    <th style="background-color:#2980b9;">ขาด/เหลือ<br><span style="font-size:11px; color:#f1c40f;">(คลิกตัวเลข)</span></th></tr>`;
@@ -422,7 +423,7 @@
             if (activeWbsSet.has(d.WBS) && d.Qty > 0) {
                 let mat = d['วัสดุ'];
                 if (!matAgg[mat]) {
-                    let fallbackDesc = mainData.find(m => m['วัสดุ'] === mat)?.['คำอธิบายวัสดุ'] || d.MatDesc;
+                    let fallbackDesc = mainData.find(m => m['วัสดุ'] === mat)?.MatDesc || d.MatDesc || '-ไม่ระบุ-';
                     matAgg[mat] = {
                         'วัสดุ': mat,
                         'คำอธิบายวัสดุ': fallbackDesc,
@@ -558,6 +559,8 @@
     function closeModal(modalId) {
         document.getElementById(modalId).classList.remove('active');
     }
+
+    window.onload = init;
 </script>
 </body>
 </html>
