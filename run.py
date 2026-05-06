@@ -159,7 +159,6 @@ for _, r in wbs_summary_df.iterrows():
         'Team': str(r['Team'])
     })
 
-# ดึงชื่อวัสดุแบบแน่นหนา (ป้องกันค่าว่าง)
 mat_desc_demand = df_demand[['วัสดุ', 'คำอธิบายวัสดุ']].copy()
 mat_desc_stock = df_stock[['วัสดุ', 'คำอธิบายวัสดุ']].copy()
 mat_desc = pd.concat([mat_desc_demand, mat_desc_stock])
@@ -185,14 +184,14 @@ final_df = pd.merge(final_df, mat_desc, on='วัสดุ', how='left').fillna
 final_df = ensure_cols(final_df, ['Stock', 'Total_Demand'], 0)
 final_df['Balance'] = final_df['Stock'] - final_df['Total_Demand']
 final_df['Category'] = final_df['วัสดุ'].apply(get_category)
+final_df.rename(columns={'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 for col in project_cols:
     if col not in final_df.columns: final_df[col] = 0
 
 df_proj['Status_Short'] = df_proj['สถานะ'].apply(get_short_status)
 wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง']], df_proj[['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร']], on='องค์ประกอบ WBS', how='left')
 wbs_details = pd.merge(wbs_details, df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount'), on='องค์ประกอบ WBS', how='left').fillna(0)
-wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'คำอธิบายวัสดุ', 'Stock', 'Balance']], on='วัสดุ', how='left').fillna('-')
-wbs_details['MatDesc'] = wbs_details['คำอธิบายวัสดุ']
+wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'Stock', 'Balance', 'MatDesc']], on='วัสดุ', how='left').fillna('-')
 wbs_details['Status_Short'] = wbs_details['สถานะ'].apply(get_short_status)
 wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant'}, inplace=True)
 wbs_details['Network'] = wbs_details['Network'].fillna('-').astype(str).str.replace(r'\.0$', '', regex=True)
