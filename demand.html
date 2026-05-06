@@ -95,7 +95,7 @@
     <div class="container">
         <div class="header-title" id="topAnchor">📋 สรุปความต้องการวัสดุ</div>
 
-        <!-- ชุดกรองข้อมูลแบบ Grid -->
+        <!-- ชุดกรองข้อมูลแบบ Grid (เมนูไม่ซ้อน) -->
         <div class="filter-grid">
             <div>
                 <label>📍 กฟฟ.: </label>
@@ -117,15 +117,18 @@
                 <label>💰 งบ (เลือกหลายรายการ): </label>
                 <div class="dropdown-check-list" id="budgetDropdown">
                     <span class="anchor" onclick="toggleDropdown('budgetDropdown')">✅ ทั้งหมด</span>
-                    <div class="items" id="budgetDropdownItems"></div>
+                    <div class="items" id="budgetDropdownItems">
+                        <!-- สร้างตัวเลือกงบผ่าน JS -->
+                    </div>
                 </div>
             </div>
-            <!-- แก้ไข ID ตรงนี้ให้ถูกต้องเพื่อไม่ให้ระบบพัง -->
             <div>
                 <label>📦 รก.คงเหลือ (จำนวนรายการ): </label>
                 <div class="dropdown-check-list" id="pendDropdown">
                     <span class="anchor" onclick="toggleDropdown('pendDropdown')">✅ ทั้งหมด</span>
-                    <div class="items" id="pendDropdownItems"></div>
+                    <div class="items" id="pendDropdownItems">
+                        <!-- สร้างตัวเลือกจำนวนคงเหลือผ่าน JS -->
+                    </div>
                 </div>
             </div>
             <div>
@@ -163,7 +166,9 @@
         <h3 style="margin-bottom: 10px; color:#c0392b; border-top: 2px dashed #eee; padding-top: 15px;">📦 ตารางที่ 2: สรุปความต้องการวัสดุรวม (ตามตารางด้านบนเรียงรหัสวัสดุ)</h3>
         <div class="table-wrapper" style="max-height: 70vh;">
             <table>
-                <thead id="matHead"></thead>
+                <thead id="matHead">
+                    <!-- หัวตารางจะถูกสร้างโดย Javascript -->
+                </thead>
                 <tbody id="matTableBody"></tbody>
             </table>
         </div>
@@ -247,7 +252,7 @@
             return;
         }
 
-        // 1. สร้าง Dropdown พื้นฐาน
+        // 1. สร้าง Dropdown (กฟฟ., ผู้ควบคุม, ทีมงาน, ประเภท)
         const branches = [...new Set(wbsSummaryData.map(item => item.Branch))].sort();
         const supervisors = [...new Set(wbsSummaryData.map(item => item.Supervisor))].filter(s => s !== '-').sort();
         const teams = [...new Set(wbsSummaryData.map(item => item.Team))].filter(t => t !== '-').sort();
@@ -422,6 +427,7 @@
             if (activeWbsSet.has(d.WBS) && d.Qty > 0) {
                 let mat = d['วัสดุ'];
                 if (!matAgg[mat]) {
+                    // หากคำอธิบายวัสดุใน demand ไม่มี ให้ดึงจาก mainData เป็นก๊อกสอง
                     let fallbackDesc = mainData.find(m => m['วัสดุ'] === mat)?.['คำอธิบายวัสดุ'] || d.MatDesc;
                     matAgg[mat] = {
                         'วัสดุ': mat,
@@ -451,8 +457,8 @@
 
         dynamicMainData.forEach(r => r.Balance = r.Stock - r.Total_Demand);
         
-        // เรียงตารางที่ 2 รหัสวัสดุจากน้อยไปมาก (รับประกันว่าไม่ error ตัวเลข)
-        dynamicMainData.sort((a, b) => String(a['วัสดุ']).localeCompare(String(b['วัสดุ'])));
+        // เรียงตารางที่ 2 รหัสวัสดุจากน้อยไปมาก 
+        dynamicMainData.sort((a, b) => a['วัสดุ'].localeCompare(b['วัสดุ']));
 
         let h = '';
         dynamicMainData.forEach(r => {
@@ -487,6 +493,7 @@
         document.getElementById('matTableBody').innerHTML = h || '<tr><td colspan="100%" style="text-align:center; padding:20px;">ไม่มีข้อมูลวัสดุในเงื่อนไขที่คุณเลือก</td></tr>';
     }
 
+    // Modal 1: ดูพัสดุใน WBS
     function showWbsDetails(wbs) {
         let wbsInfo = currentWBSList.find(x => x.WBS === wbs) || {};
         let wbsName = wbsInfo.ProjectName || '';
@@ -517,10 +524,11 @@
         document.getElementById('wbsModal').classList.add('active'); 
     }
 
+    // Modal 2: ดู WBS ที่รอรับพัสดุชิ้นนี้ 
     function showMatDetails(matCode, groupName) {
         let desc = demandDetailsData.find(d => d['วัสดุ'] === matCode)?.MatDesc || '';
-        let titleSuffix = groupName === 'ALL' ? 'ทั้งหมด' : `เฉพาะกลุ่ม: ${groupName}`;
-        document.getElementById('matModalTitle').innerHTML = `📋 รายการ WBS ที่ใช้อุปกรณ์: <b>${matCode}</b> <br><span style="font-size:14px; font-weight:normal; color:#f1c40f;">${desc} (${titleSuffix})</span>`;
+        let titleSuffix = groupName === 'ALL' ? 'ทั้งหมด' : `งบ: ${groupName}`;
+        document.getElementById('matModalTitle').innerHTML = `📋 รายการ WBS <span style="background-color:white; color:#34495e; padding:2px 8px; border-radius:12px;">${titleSuffix}</span> ที่ใช้อุปกรณ์: <span style="color:#f1c40f;">${matCode} ${desc}</span>`;
         
         let data = wbsDataByMat[matCode] || [];
         let h = '';
@@ -561,4 +569,3 @@
 </script>
 </body>
 </html>
-
