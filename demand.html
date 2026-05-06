@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>ความต้องการวัสดุ (Demand)</title>
+    <link rel="icon" href="data:,"> <!-- แก้ปัญหา 404 favicon.ico -->
     <link rel="stylesheet" href="style.css">
     <script src="data.js"></script>
     <style>
@@ -40,16 +41,44 @@
 
         /* Custom Multiselect */
         .dropdown-check-list { display: inline-block; position: relative; width: 100%; }
-        .dropdown-check-list .anchor { width: 100%; display: block; padding: 6px 25px 6px 8px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; height: 32px; box-sizing: border-box; font-weight: normal;}
+        .dropdown-check-list .anchor { width: 100%; display: block; padding: 6px 25px 6px 8px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; height: 32px; box-sizing: border-box; font-weight: normal; font-size: 13px;}
         .dropdown-check-list .anchor:after { content: '▼'; position: absolute; right: 8px; top: 8px; font-size: 10px; color: #7f8c8d; }
-        .dropdown-check-list .items { display: none; position: absolute; background: white; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; z-index: 99; min-width: 250px; max-width: 380px; border-radius: 4px; padding: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); left: 0; }
+        .dropdown-check-list .items { display: none; position: absolute; background: white; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; z-index: 99; min-width: 100%; border-radius: 4px; padding: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); left: 0; }
         .dropdown-check-list .items label { display: flex; align-items: flex-start; padding: 6px; cursor: pointer; font-weight: normal; border-bottom: 1px solid #f1f1f1; font-size: 12px; line-height: 1.4; white-space: normal;}
         .dropdown-check-list .items label:hover { background-color: #e8f4f8; }
         .dropdown-check-list .items input { margin-right: 8px; margin-top: 2px; }
         .dropdown-check-list.visible .items { display: block; }
         
-        .btn-reset { padding: 6px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: 32px; width: 100%; }
+        .btn-reset { padding: 6px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: 32px; width: 100%; font-size: 13px;}
         .btn-reset:hover { background: #c0392b; }
+
+        /* จัดการเมนูไม่ให้ซ้อนกัน */
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 15px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e6ed;
+            margin-bottom: 20px;
+            align-items: end;
+        }
+        .filter-grid label {
+            font-weight: bold;
+            color: #34495e;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+        .filter-grid select {
+            width: 100%;
+            padding: 6px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            height: 32px;
+            font-size: 13px;
+        }
     </style>
 </head>
 <body>
@@ -67,23 +96,26 @@
     <div class="container">
         <div class="header-title" id="topAnchor">📋 สรุปความต้องการวัสดุ</div>
 
-        <!-- ชุดกรองข้อมูลแบบใหม่ จัดเต็ม -->
-        <div class="filter-group" style="display:flex; flex-wrap:wrap; gap:15px; margin-bottom: 20px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e0e6ed; align-items: flex-end;">
-            <div style="flex: 1; min-width: 120px;">
-                <label style="font-weight:bold; color:#34495e; display:block; margin-bottom:5px;">📍 กฟฟ.: </label>
-                <select id="branchFilter" onchange="applyFilters()" style="width:100%; padding:6px; border-radius:4px; border:1px solid #ccc; height:32px;"><option value="ALL">✅ ทุก กฟฟ.</option></select>
+        <!-- ชุดกรองข้อมูล (Grid Layout แก้ปัญหาเมนูซ้อนกัน) -->
+        <div class="filter-grid">
+            <div>
+                <label>📍 กฟฟ.: </label>
+                <select id="branchFilter" onchange="applyFilters()"><option value="ALL">✅ ทุก กฟฟ.</option></select>
             </div>
-            <div style="flex: 1; min-width: 120px;">
-                <label style="font-weight:bold; color:#34495e; display:block; margin-bottom:5px;">👷 ผู้ควบคุม: </label>
-                <select id="supFilter" onchange="applyFilters()" style="width:100%; padding:6px; border-radius:4px; border:1px solid #ccc; height:32px;"><option value="ALL">✅ ทั้งหมด</option></select>
+            <div>
+                <label>👷 ผู้ควบคุม: </label>
+                <select id="supFilter" onchange="applyFilters()"><option value="ALL">✅ ทั้งหมด</option></select>
             </div>
-            <div style="flex: 1; min-width: 120px;">
-                <label style="font-weight:bold; color:#34495e; display:block; margin-bottom:5px;">🔧 ทีมงาน: </label>
-                <select id="teamFilter" onchange="applyFilters()" style="width:100%; padding:6px; border-radius:4px; border:1px solid #ccc; height:32px;"><option value="ALL">✅ ทุกทีมงาน</option></select>
+            <div>
+                <label>🔧 ทีมงาน: </label>
+                <select id="teamFilter" onchange="applyFilters()"><option value="ALL">✅ ทุกทีมงาน</option></select>
             </div>
-            
-            <div style="flex: 1.5; min-width: 160px;">
-                <label style="font-weight:bold; color:#34495e; display:block; margin-bottom:5px;">💰 งบ (เลือกหลายรายการ): </label>
+            <div>
+                <label>🏷️ ประเภท: </label>
+                <select id="categoryFilter" onchange="applyFilters()"><option value="ALL">✅ ทุกประเภท</option></select>
+            </div>
+            <div>
+                <label>💰 งบ (เลือกหลายรายการ): </label>
                 <div class="dropdown-check-list" id="budgetDropdown">
                     <span class="anchor" onclick="toggleDropdown('budgetDropdown')">✅ ทั้งหมด</span>
                     <div class="items" id="budgetDropdownItems">
@@ -91,9 +123,8 @@
                     </div>
                 </div>
             </div>
-
-            <div style="flex: 2; min-width: 220px;">
-                <label style="font-weight:bold; color:#34495e; display:block; margin-bottom:5px;">📦 อุปกรณ์ (เลือกหลายรายการ): </label>
+            <div style="grid-column: span 2;">
+                <label>📦 รก.คงเหลือ (เลือกหลายรายการ): </label>
                 <div class="dropdown-check-list" id="matDropdown">
                     <span class="anchor" onclick="toggleDropdown('matDropdown')">✅ ทั้งหมด</span>
                     <div class="items" id="matDropdownItems">
@@ -101,8 +132,7 @@
                     </div>
                 </div>
             </div>
-            
-            <div style="flex: 0.5; min-width: 120px;">
+            <div>
                 <button class="btn-reset" onclick="resetFilters()">🔄 ล้างตัวกรอง</button>
             </div>
         </div>
@@ -203,7 +233,7 @@
     let currentWBSList = [];
     let activeMatFilter = ''; 
 
-    // Helper Function: ตรวจสอบกลุ่มโครงการจากรหัส WBS
+    // Helper Function: ตรวจสอบกลุ่มโครงการจากรหัส WBS (เพื่อให้ทำงานได้ทันที)
     function getProjectGroup(wbs) {
         let w = wbs.toUpperCase();
         if(w.startsWith('C-68')) return 'ผู้ใช้ไฟ 68';
@@ -225,26 +255,29 @@
             return;
         }
 
-        // 1. สร้าง Dropdown กรองข้อมูล (กฟฟ., ผู้ควบคุม, ทีมงาน)
+        // 1. สร้าง Dropdown กรองข้อมูล (กฟฟ., ผู้ควบคุม, ทีมงาน, ประเภท)
         const branches = [...new Set(wbsSummaryData.map(item => item.Branch))].sort();
         const supervisors = [...new Set(wbsSummaryData.map(item => item.Supervisor))].filter(s => s !== '-').sort();
         const teams = [...new Set(wbsSummaryData.map(item => item.Team))].filter(t => t !== '-').sort();
+        const categories = [...new Set(mainData.map(item => item.Category))].filter(c => c !== '-ไม่ระบุ-').sort();
 
         const brSel = document.getElementById('branchFilter');
         const supSel = document.getElementById('supFilter');
         const tmSel = document.getElementById('teamFilter');
+        const catSel = document.getElementById('categoryFilter');
 
         branches.forEach(b => brSel.appendChild(new Option(b, b)));
         supervisors.forEach(s => supSel.appendChild(new Option(s, s)));
         teams.forEach(t => tmSel.appendChild(new Option(t, t)));
+        categories.forEach(c => catSel.appendChild(new Option(c, c)));
 
-        // 2. สร้าง Dropdown Multi-select สำหรับ งบ
+        // 2. สร้าง Dropdown Multi-select สำหรับ "งบ"
         const budgetItemsDiv = document.getElementById('budgetDropdownItems');
         projectGroups.sort().forEach(g => {
             budgetItemsDiv.innerHTML += `<label><input type="checkbox" class="chk-budget" value="${g}" onchange="updateDropdownText('budgetDropdown', 'ทั้งหมด'); applyFilters();"> ${g}</label>`;
         });
 
-        // 3. สร้าง Dropdown Multi-select สำหรับ อุปกรณ์ (กรองเฉพาะที่มีจำนวนค้างจ่าย)
+        // 3. สร้าง Dropdown Multi-select สำหรับ "รก.คงเหลือ"
         const uniqueMats = new Map();
         demandDetailsData.forEach(d => {
             if(d.Qty > 0) uniqueMats.set(d['วัสดุ'], d.MatDesc);
@@ -287,7 +320,7 @@
 
     // คลิกนอก Dropdown เพื่อปิด
     window.onclick = function(event) {
-        if (!event.target.matches('.anchor') && !event.target.matches('input') && !event.target.matches('label')) {
+        if (!event.target.matches('.anchor') && !event.target.matches('input') && !event.target.matches('label') && !event.target.matches('b')) {
             var dropdowns = document.getElementsByClassName("dropdown-check-list");
             for (var i = 0; i < dropdowns.length; i++) {
                 if (dropdowns[i].classList.contains('visible') && !dropdowns[i].contains(event.target)) {
@@ -300,10 +333,12 @@
         }
     }
 
+    // ฟังก์ชันปุ่มรีเซ็ต
     function resetFilters() {
         document.getElementById('branchFilter').value = 'ALL';
         document.getElementById('supFilter').value = 'ALL';
         document.getElementById('teamFilter').value = 'ALL';
+        document.getElementById('categoryFilter').value = 'ALL';
         
         document.querySelectorAll('.chk-budget').forEach(c => c.checked = false);
         document.querySelectorAll('.chk-mat').forEach(c => c.checked = false);
@@ -315,6 +350,7 @@
         applyFilters();
     }
 
+    // คลิกที่รหัสวัสดุในตารางที่ 2
     function filterTable1ByMat(matCode) {
         if (activeMatFilter === matCode) {
             activeMatFilter = ''; 
@@ -327,39 +363,55 @@
         }
     }
 
+    // ฟังก์ชันกรองข้อมูลหลัก (กระทบทั้ง 2 ตาราง)
     function applyFilters() {
         const br = document.getElementById('branchFilter').value;
         const sup = document.getElementById('supFilter').value;
         const tm = document.getElementById('teamFilter').value;
+        const cat = document.getElementById('categoryFilter').value;
 
         const selectedBudgets = Array.from(document.querySelectorAll('.chk-budget:checked')).map(c => c.value);
         const selectedMats = Array.from(document.querySelectorAll('.chk-mat:checked')).map(c => c.value);
 
-        // 1. กรองเพื่อเป็นฐาน (Base) 
+        // 1. กรอง WBS จาก Dropdown พื้นฐาน
         let baseWBSList = wbsSummaryData.filter(r => {
             let passBr = (br === 'ALL' || r.Branch === br);
             let passSup = (sup === 'ALL' || r.Supervisor === sup);
             let passTm = (tm === 'ALL' || r.Team === tm);
             
+            // กรองด้วย "งบ"
             let wbsGroup = getProjectGroup(r.WBS);
             let passBudg = (selectedBudgets.length === 0 || selectedBudgets.includes(wbsGroup));
             
+            // กรองด้วย "ประเภท"
+            let passCat = true;
+            if (cat !== 'ALL') {
+                let requiredMats = demandDetailsData.filter(d => d.WBS === r.WBS && d.Qty > 0).map(d => d['วัสดุ']);
+                let wbsCategories = requiredMats.map(mCode => {
+                    let matInfo = mainData.find(m => m['วัสดุ'] === mCode);
+                    return matInfo ? matInfo.Category : 'อื่นๆ';
+                });
+                passCat = wbsCategories.includes(cat);
+            }
+
+            // กรองด้วย "รก.คงเหลือ"
             let passMat = true;
             if (selectedMats.length > 0) {
                 let requiredMats = demandDetailsData.filter(d => d.WBS === r.WBS && d.Qty > 0).map(d => d['วัสดุ']);
                 passMat = selectedMats.some(m => requiredMats.includes(m));
             }
 
-            return passBr && passSup && passTm && passBudg && passMat;
+            return passBr && passSup && passTm && passBudg && passCat && passMat;
         });
 
-        // 2. กรองเพิ่มเติมด้วยรหัสวัสดุ (เมื่อกดรหัสในตาราง 2)
+        // 2. กรองเพิ่มเติมหากคลิกจากตารางล่าง
         currentWBSList = baseWBSList;
         if (activeMatFilter !== '') {
             const wbsWithMat = new Set(demandDetailsData.filter(d => d['วัสดุ'] === activeMatFilter && d.Qty > 0).map(x => x.WBS));
             currentWBSList = baseWBSList.filter(r => wbsWithMat.has(r.WBS));
         }
 
+        // อัปเดตตัวเลขยอดรวม
         document.getElementById('wbsCount').innerText = currentWBSList.length;
 
         let filterText = '';
@@ -387,16 +439,15 @@
         });
         document.getElementById('wbsTableBody').innerHTML = wbsHtml || '<tr><td colspan="9" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
 
-        // วาดตารางที่ 2 แบบ Dynamic ตามข้อมูลที่กรองไว้ (baseWBSList)
+        // วาดตารางที่ 2 อิงตาม baseWBSList
         renderDynamicTable2(baseWBSList);
     }
 
-    // วาดตารางที่ 2 แบบคำนวณใหม่ตาม WBS ที่เลือก
+    // วาดตารางที่ 2 
     function renderDynamicTable2(baseList) {
         const activeWbsSet = new Set(baseList.map(w => w.WBS));
         let matAgg = {};
         
-        // คำนวณความต้องการใหม่ทั้งหมด เฉพาะ WBS ที่โชว์อยู่
         demandDetailsData.forEach(d => {
             if (activeWbsSet.has(d.WBS) && d.Qty > 0) {
                 let mat = d['วัสดุ'];
@@ -419,9 +470,17 @@
 
         let dynamicMainData = Object.values(matAgg);
         
-        // กรองตารางที่ 2 ถ้ามีการใช้อุปกรณ์ (Dropdown Multi-select)
+        // ถ้ามีการใช้ Dropdown ประเภท หรือ รก.คงเหลือ ต้องกรองตารางล่างด้วย
+        const cat = document.getElementById('categoryFilter').value;
         const selectedMats = Array.from(document.querySelectorAll('.chk-mat:checked')).map(c => c.value);
-        if(selectedMats.length > 0) {
+
+        if (cat !== 'ALL') {
+            dynamicMainData = dynamicMainData.filter(m => {
+                let matInfo = mainData.find(x => x['วัสดุ'] === m['วัสดุ']);
+                return matInfo && matInfo.Category === cat;
+            });
+        }
+        if (selectedMats.length > 0) {
             dynamicMainData = dynamicMainData.filter(m => selectedMats.includes(m['วัสดุ']));
         }
 
@@ -489,7 +548,7 @@
         document.getElementById('wbsModal').classList.add('active'); 
     }
 
-    // Modal 2: ดู WBS ที่รอรับพัสดุชิ้นนี้ (ตามภาพที่ 2 ของคุณเป๊ะๆ)
+    // Modal 2: ดู WBS ที่รอรับพัสดุชิ้นนี้ 
     function showMatDetails(matCode, groupName) {
         let desc = demandDetailsData.find(d => d['วัสดุ'] === matCode)?.MatDesc || '';
         let titleSuffix = groupName === 'ALL' ? 'ทั้งหมด' : `งบ: ${groupName}`;
@@ -498,23 +557,11 @@
         let data = wbsDataByMat[matCode] || [];
         let h = '';
         
-        // ดึงเงื่อนไขจากฟิลเตอร์ปัจจุบัน
-        const br = document.getElementById('branchFilter').value;
-        const sup = document.getElementById('supFilter').value;
-        const tm = document.getElementById('teamFilter').value;
-        const selectedBudgets = Array.from(document.querySelectorAll('.chk-budget:checked')).map(c => c.value);
-
-        const baseWbsSet = new Set(wbsSummaryData.filter(r => {
-            let passBr = (br === 'ALL' || r.Branch === br);
-            let passSup = (sup === 'ALL' || r.Supervisor === sup);
-            let passTm = (tm === 'ALL' || r.Team === tm);
-            let wbsGroup = getProjectGroup(r.WBS);
-            let passBudg = (selectedBudgets.length === 0 || selectedBudgets.includes(wbsGroup));
-            return passBr && passSup && passTm && passBudg;
-        }).map(w => w.WBS));
+        // กรองหาเฉพาะ WBS ที่ปรากฏอยู่ในตารางที่ 1 ปัจจุบัน
+        const activeWbsSet = new Set(currentWBSList.map(w => w.WBS));
 
         data.forEach(r => {
-            if(r.Qty > 0 && baseWbsSet.has(r.WBS)) {
+            if(r.Qty > 0 && activeWbsSet.has(r.WBS)) {
                 let wbsGroup = getProjectGroup(r.WBS);
                 let showRow = true;
                 if(groupName !== 'ALL' && wbsGroup !== groupName) showRow = false;
@@ -535,7 +582,7 @@
             }
         });
         
-        document.getElementById('matModalBodyContent').innerHTML = h || '<tr><td colspan="7" style="text-align:center; padding:20px;">ไม่มีข้อมูล</td></tr>';
+        document.getElementById('matModalBodyContent').innerHTML = h || '<tr><td colspan="7" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับตัวกรอง</td></tr>';
         
         document.getElementById('wbsModal').classList.remove('active'); 
         document.getElementById('matModal').classList.add('active');
@@ -544,6 +591,7 @@
     function closeModal(modalId) {
         document.getElementById(modalId).classList.remove('active');
     }
+
 </script>
 </body>
 </html>
