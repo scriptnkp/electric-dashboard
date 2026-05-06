@@ -4,7 +4,7 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
-# 1. ตั้งค่าไฟล์เป็น .txt ทั้งหมด
+# 1. ตั้งค่าไฟล์เป็น .txt ทั้งหมด 100%
 file_mb52 = '6.mb52.txt'       
 file_zmb25 = '11.zmb25.txt'      
 file_cn43n = '14.CN43N.txt'     
@@ -19,9 +19,6 @@ file_n_z005 = 'n-z005.txt'
 
 print("กำลังอ่านไฟล์ TXT ทั้งหมด...")
 
-# ==========================================
-# ฟังก์ชันช่วยอ่านไฟล์ Txt และป้องกันข้อผิดพลาด
-# ==========================================
 def read_sap_txt(filepath):
     data = []
     headers = []
@@ -67,9 +64,6 @@ def ensure_cols(df, cols, default_val='-'):
         if c not in df.columns: df[c] = default_val
     return df
 
-# ------------------------------------------
-# อ่านไฟล์ข้อมูลหลัก
-# ------------------------------------------
 df_stock = read_sap_txt(file_mb52)
 df_stock.rename(columns={'Plnt': 'โรงงาน', 'SLoc': 'ที่เก็บสินค้า'}, inplace=True)
 df_stock = ensure_cols(df_stock, ['วัสดุ', 'คำอธิบายวัสดุ', 'โรงงาน', 'ที่เก็บสินค้า', 'ที่ใช้ได้'], 0)
@@ -130,9 +124,6 @@ def get_team(name):
     if match: return match.group(1).upper()
     return '-'
 
-# ==========================================
-# จัดการข้อมูลความต้องการ (Demand) + WBS Summary
-# ==========================================
 target_locs = ['0021', '0022', '0023', '0024', '0025', '6001', '6002', '6003', '6004', '6006', '6007', '6008', '6009', '6010', '6011']
 df_stock['ที่เก็บสินค้า'] = df_stock['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].str.zfill(4)
 stock_summary = df_stock[(df_stock['โรงงาน'] == 'D060') & (df_stock['ที่เก็บสินค้า'].isin(target_locs))].groupby('วัสดุ')['ที่ใช้ได้'].sum().reset_index().rename(columns={'ที่ใช้ได้': 'Stock'})
@@ -170,14 +161,14 @@ for _, r in wbs_summary_df.iterrows():
 
 mat_desc = pd.concat([df_demand[['วัสดุ', 'คำอธิบายวัสดุ']], df_stock[['วัสดุ', 'คำอธิบายวัสดุ']]]).drop_duplicates(subset=['วัสดุ']).dropna()
 
-# จัดการข้อมูลสำหรับแสดงรายละเอียด (Modal 1)
 demand_details = pd.merge(df_demand_pending, stock_summary, on='วัสดุ', how='left').fillna(0)
+demand_details = pd.merge(demand_details, mat_desc, on='วัสดุ', how='left').fillna('-ไม่ระบุ-')
+
 demand_details['Balance'] = demand_details['Stock'] - demand_details['ปริมาณผลต่าง']
 demand_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'ปริมาณผลต่าง': 'Qty', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 demand_details = ensure_cols(demand_details, ['WBS', 'วัสดุ', 'MatDesc', 'Qty', 'Stock', 'Balance'])
 demand_details_data = demand_details[['WBS', 'วัสดุ', 'MatDesc', 'Qty', 'Stock', 'Balance']].to_dict(orient='records')
 
-# จัดการข้อมูลสรุปรวม (ตารางที่ 2)
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
 pie_summary = df_demand.groupby('Project_Group')['องค์ประกอบ WBS'].nunique().reset_index().rename(columns={'องค์ประกอบ WBS': 'WBS_Count'})
 pivot_demand = df_demand.pivot_table(index='วัสดุ', columns='Project_Group', values='ปริมาณผลต่าง', aggfunc='sum', fill_value=0).reset_index()
@@ -190,22 +181,18 @@ final_df = pd.merge(final_df, mat_desc, on='วัสดุ', how='left').fillna
 final_df = ensure_cols(final_df, ['Stock', 'Total_Demand'], 0)
 final_df['Balance'] = final_df['Stock'] - final_df['Total_Demand']
 final_df['Category'] = final_df['วัสดุ'].apply(get_category)
+final_df.rename(columns={'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 for col in project_cols:
     if col not in final_df.columns: final_df[col] = 0
 
-# จัดการข้อมูลสำหรับแสดง WBS ของพัสดุ (Modal 2)
 df_proj['Status_Short'] = df_proj['สถานะ'].apply(get_short_status)
 wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง']], df_proj[['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร']], on='องค์ประกอบ WBS', how='left')
 wbs_details = pd.merge(wbs_details, df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount'), on='องค์ประกอบ WBS', how='left').fillna(0)
-wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'Stock', 'Balance']], on='วัสดุ', how='left').fillna('-')
-wbs_details['MatDesc'] = wbs_details['วัสดุ'].map(mat_desc.set_index('วัสดุ')['คำอธิบายวัสดุ']).fillna('-ไม่ระบุ-')
+wbs_details = pd.merge(wbs_details, final_df[['วัสดุ', 'Stock', 'Balance', 'MatDesc']], on='วัสดุ', how='left').fillna('-')
 wbs_details['Status_Short'] = wbs_details['สถานะ'].apply(get_short_status)
 wbs_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'โครงข่าย': 'Network', 'ปริมาณผลต่าง': 'Qty', 'ชื่อ': 'Project_Name', 'Status_Short': 'Status', 'ผู้สมัคร': 'Applicant'}, inplace=True)
 wbs_details['Network'] = wbs_details['Network'].fillna('-').astype(str).str.replace(r'\.0$', '', regex=True)
 
-# ==========================================
-# จัดการ ME2N รับเข้าและจัดสรร
-# ==========================================
 df_me2n_in = df_me2n[df_me2n['โรงงาน'] == 'D060'].copy() if not df_me2n.empty else pd.DataFrame()
 if not df_me2n_in.empty:
     df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'] = df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'].apply(parse_sap_num)
@@ -227,9 +214,6 @@ alloc_active = df_me2n_out[df_me2n_out['ยังจะถูกส่งมอ�
 alloc_details = alloc_active[['เอกสารการจัดซื้อ', 'โรงงาน', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']] if not alloc_active.empty else pd.DataFrame()
 alloc_plants = sorted([str(v) for v in alloc_active['โรงงาน'].unique() if str(v) != '-ไม่ระบุ-']) if not alloc_active.empty else []
 
-# ==========================================
-# จัดการ ME2N1 & ดึงวันที่ส่งมอบ
-# ==========================================
 me2n1_due_dates = {}
 if not df_me2n1.empty:
     if 'วันที่ส่งมอบ' in df_me2n1.columns and 'เอกสารการจัดซื้อ' in df_me2n1.columns:
@@ -257,9 +241,6 @@ if not df_me2n1.empty:
 else:
     me2n1_details = pd.DataFrame(); me2n1_vendors = []
 
-# ==========================================
-# อ่านไฟล์ N.txt (ดึงชื่องบไปใช้)
-# ==========================================
 wbs_names_map = {}
 try:
     with open(file_budget_n, 'r', encoding='utf-8') as f: lines = f.readlines()
@@ -276,9 +257,6 @@ for line in lines:
             name = parts[3].strip()
             if w and name: wbs_names_map[w] = name
 
-# ==========================================
-# จัดการไฟล์งบเงิน (C.txt, I.txt, P.txt)
-# ==========================================
 budget_data = []
 def process_budget_file(file_path, file_type):
     try:
@@ -309,9 +287,6 @@ process_budget_file(file_budget_c, 'C')
 process_budget_file(file_budget_i, 'I')
 process_budget_file(file_budget_p, 'P')
 
-# ==========================================
-# จัดการรายการจัดซื้อ (z005.txt และ n-z005.txt)
-# ==========================================
 purchase_data = []
 vendor_map = {}
 try:
@@ -370,9 +345,6 @@ for line in lines:
                     'DueDate': due_date_str, 'OverdueDays': overdue_days
                 })
 
-# ==========================================
-# บันทึกเป็น data.js ทั้งหมด!
-# ==========================================
 tz_th = timezone(timedelta(hours=7))
 update_time = datetime.now(tz_th).strftime("%d/%m/%Y เวลา %H:%M น.")
 
