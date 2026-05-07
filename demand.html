@@ -7,19 +7,23 @@
     <link rel="stylesheet" href="style.css">
     <script src="data.js"></script>
     <style>
-        .table-wrapper { max-height: 50vh; overflow: auto; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 25px;}
-        table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; min-width: 1000px; }
-        th { background-color: #2c3e50; color: white; padding: 10px; text-align: center; position: sticky; top: 0; z-index: 10;}
-        td { border: 1px solid #ddd; padding: 8px; vertical-align: middle;}
+        .table-wrapper { max-height: 50vh; overflow-y: auto; overflow-x: hidden; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 25px;}
+        
+        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+        th { background-color: #2c3e50; color: white; padding: 8px 4px; text-align: center; position: sticky; top: 0; z-index: 10; line-height: 1.3;}
+        td { border: 1px solid #ddd; padding: 6px 4px; vertical-align: middle; word-wrap: break-word;}
         tbody tr:hover { background-color: #e8f4f8; }
+        
+        .desc-col { min-width: 150px; max-width: 250px; white-space: normal; }
+        .num-col { text-align: right; white-space: nowrap; }
+        .nowrap-col { white-space: nowrap; text-align: center; }
         
         .header-title { display: flex; align-items: center; gap: 10px; margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 22px; font-weight: bold;}
         .card-green { background-color: #e8f8f5; border-left: 6px solid #1abc9c; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex: 1; }
         .val-text { font-size: 28px; font-weight: bold; color: #16a085; }
-        .num-col { text-align: right; }
         
-        .badge-status { background-color: #34495e; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; }
-        .badge-team { background-color: #8e44ad; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; }
+        .badge-status { background-color: #34495e; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; white-space: nowrap; display: inline-block;}
+        .badge-team { background-color: #8e44ad; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap; display: inline-block;}
 
         .link-text { color: #3498db; text-decoration: underline; cursor: pointer; font-weight: bold; padding: 2px 8px; border-radius: 4px; transition: 0.2s;}
         .link-text:hover { background-color: #3498db; color: white; text-decoration: none;}
@@ -52,89 +56,21 @@
         .btn-reset { padding: 6px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: 32px; width: 100%; font-size: 13px;}
         .btn-reset:hover { background: #c0392b; }
 
-        .filter-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 15px;
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #e0e6ed;
-            margin-bottom: 20px;
-            align-items: end;
-        }
-        .filter-grid label {
-            font-weight: bold;
-            color: #34495e;
-            display: block;
-            margin-bottom: 5px;
-            font-size: 13px;
-        }
-        .filter-grid select {
-            width: 100%;
-            padding: 6px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-            height: 32px;
-            font-size: 13px;
-        }
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e0e6ed; margin-bottom: 20px; align-items: end; }
+        .filter-grid label { font-weight: bold; color: #34495e; display: block; margin-bottom: 5px; font-size: 13px; }
+        .filter-grid select { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #ccc; height: 32px; font-size: 13px; }
 
-        /* ป้ายคลิกสำหรับ งบ */
-        .badge-click {
-            background-color: #ffffff;
-            border: 1px solid #1abc9c;
-            color: #16a085;
-            padding: 4px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-block;
-        }
-        .badge-click:hover, .badge-click.active {
-            background-color: #1abc9c;
-            color: #ffffff;
-        }
+        .badge-click { background-color: #ffffff; border: 1px solid #1abc9c; color: #16a085; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; display: inline-block; }
+        .badge-click:hover, .badge-click.active { background-color: #1abc9c; color: #ffffff; }
 
-        /* ป้ายคลิกสำหรับ กฟฟ. */
-        .badge-branch {
-            background-color: #ffffff;
-            border: 1px solid #3498db;
-            color: #2980b9;
-            padding: 4px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-block;
-        }
-        .badge-branch:hover, .badge-branch.active {
-            background-color: #3498db;
-            color: #ffffff;
-        }
+        .badge-branch { background-color: #ffffff; border: 1px solid #3498db; color: #2980b9; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; display: inline-block; }
+        .badge-branch:hover, .badge-branch.active { background-color: #3498db; color: #ffffff; }
 
-        /* ป้ายคลิกสำหรับ ทีมงาน (สีส้ม) */
-        .badge-team-click {
-            background-color: #ffffff;
-            border: 1px solid #f39c12;
-            color: #d35400;
-            padding: 4px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: bold;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            cursor: pointer;
-            transition: 0.2s;
-            display: inline-block;
-        }
-        .badge-team-click:hover, .badge-team-click.active {
-            background-color: #f39c12;
-            color: #ffffff;
-        }
+        .badge-team-click { background-color: #ffffff; border: 1px solid #f39c12; color: #d35400; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: 0.2s; display: inline-block; }
+        .badge-team-click:hover, .badge-team-click.active { background-color: #f39c12; color: #ffffff; }
+        
+        .sortable-th { cursor: pointer; transition: 0.2s; user-select: none;}
+        .sortable-th:hover { background-color: #e67e22; }
     </style>
 </head>
 <body>
@@ -184,6 +120,22 @@
                 </div>
             </div>
             <div>
+                <label>🚚 จัดสรร (รอนำเข้า): </label>
+                <select id="allocFilter" onchange="applyFilters()">
+                    <option value="ALL">✅ ทั้งหมด</option>
+                    <option value="HAS">📌 มีจัดสรร</option>
+                    <option value="NONE">❌ ไม่มีจัดสรร</option>
+                </select>
+            </div>
+            <div>
+                <label>🛒 จัดซื้อ (รอรับของ): </label>
+                <select id="prpoFilter" onchange="applyFilters()">
+                    <option value="ALL">✅ ทั้งหมด</option>
+                    <option value="HAS">📌 มีจัดซื้อ</option>
+                    <option value="NONE">❌ ไม่มีจัดซื้อ</option>
+                </select>
+            </div>
+            <div>
                 <button class="btn-reset" onclick="resetFilters()">🔄 ล้างตัวกรอง</button>
             </div>
         </div>
@@ -198,9 +150,7 @@
                     </div>
                     
                     <div id="branchBreakdown" style="display: flex; gap: 8px; flex-wrap: wrap; border-left: 2px solid #aeb6bf; padding-left: 15px; min-height: 24px;"></div>
-                    
                     <div id="teamBreakdown" style="display: none; gap: 8px; flex-wrap: wrap; border-left: 2px solid #f39c12; padding-left: 15px; min-height: 24px;"></div>
-
                     <div id="wbsBreakdown" style="display: flex; gap: 8px; flex-wrap: wrap; border-left: 2px solid #a3e4d7; padding-left: 15px; min-height: 24px;"></div>
                 </div>
             </div>
@@ -211,13 +161,13 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="min-width: 160px;">WBS</th>
+                        <th style="min-width: 140px;">WBS</th>
                         <th>โครงข่าย</th>
-                        <th style="min-width: 300px;">ชื่องาน</th>
+                        <th>ชื่องาน</th>
                         <th>สถานะ</th>
                         <th>ทีมงาน</th>
                         <th>ผู้ควบคุม</th>
-                        <th style="background-color: #d35400;">รก.คงเหลือ (กดดู)</th>
+                        <th style="background-color: #d35400;" class="sortable-th" onclick="sortTable1()" title="คลิกเพื่อเรียงลำดับ">รก.คงเหลือ <span id="sortIcon">↕️</span></th>
                         <th>วท.ชำระ</th>
                         <th>วท.อ.เปิด</th>
                     </tr>
@@ -246,11 +196,11 @@
                     <thead>
                         <tr>
                             <th style="min-width: 120px;">วัสดุ (คลิก)</th>
-                            <th style="min-width: 250px;">ชื่ออุปกรณ์</th>
+                            <th style="min-width: 200px;">ชื่ออุปกรณ์</th>
                             <th>โครงข่าย</th>
-                            <th>ปริมาณ</th>
-                            <th>สต๊อก</th>
-                            <th>คงเหลือ</th>
+                            <th>ปริมาณงาน</th>
+                            <th style="background-color:#16a085;">คงคลังรวม<br><span style="font-size:10px;">(สต็อก+รอนำเข้า)</span></th>
+                            <th style="background-color:#c0392b;">ขาด/เหลือ<br><span style="font-size:10px;">(อิงตามตาราง 2)</span></th>
                             <th>สถานะ</th>
                             <th>ผู้ควบคุม</th>
                         </tr>
@@ -271,9 +221,9 @@
                 <table style="width: 100%;">
                     <thead>
                         <tr>
-                            <th style="min-width: 150px;">WBS (คลิก)</th>
-                            <th style="min-width: 100px;">โครงข่าย</th>
-                            <th style="min-width: 250px;">ชื่องาน</th>
+                            <th style="min-width: 130px;">WBS (คลิก)</th>
+                            <th>โครงข่าย</th>
+                            <th style="min-width: 200px;">ชื่องาน</th>
                             <th>ปริมาณ</th>
                             <th style="color:#e74c3c;">คงเหลือ (รายการ)</th>
                             <th>สถานะ</th>
@@ -289,6 +239,11 @@
 <script>
     let currentWBSList = [];
     let activeMatFilter = ''; 
+    let allocMap = {}; 
+    let prpoMap = {};  
+    let wbsSortDirection = ''; 
+
+    window.currentDynamicMainData = [];
 
     function getProjectGroup(wbs) {
         let w = wbs.toUpperCase();
@@ -310,6 +265,19 @@
         if (typeof wbsSummaryData === 'undefined' || typeof demandDetailsData === 'undefined' || typeof mainData === 'undefined' || typeof projectGroups === 'undefined') {
             document.getElementById('wbsTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:#e74c3c; padding:20px; font-weight:bold; font-size:16px;">⚠️ เซิร์ฟเวอร์กำลังอัปเดตข้อมูล โปรดรอสักครู่ แล้วกดรีเฟรชหน้าเว็บ (F5)</td></tr>';
             return;
+        }
+
+        if (typeof me2nSummaryData !== 'undefined') {
+            me2nSummaryData.forEach(item => {
+                let mat = item['วัสดุ'];
+                allocMap[mat] = (allocMap[mat] || 0) + (parseFloat(item['ยังจะถูกส่งมอบ (ปริมาณ)']) || 0);
+            });
+        }
+        if (typeof purchaseData !== 'undefined') {
+            purchaseData.forEach(item => {
+                let mat = item['Mat'];
+                prpoMap[mat] = (prpoMap[mat] || 0) + (parseFloat(item['Qty']) || 0);
+            });
         }
 
         const branches = [...new Set(wbsSummaryData.map(item => item.Branch))].sort();
@@ -339,12 +307,15 @@
         });
 
         let thHtml = `<tr>
-            <th style="min-width:140px;">รหัสวัสดุ <br><span style="font-size:11px; color:#f1c40f;">(คลิกเพื่อกรอง WBS)</span></th>
-            <th style="min-width:300px;">คำอธิบายวัสดุ</th>`;
+            <th>รหัสวัสดุ <br><span style="font-size:10px; color:#f1c40f;">(คลิกเพื่อกรอง WBS)</span></th>
+            <th>คำอธิบายวัสดุ</th>`;
         (projectGroups || []).forEach(g => { thHtml += `<th>${g}</th>`; });
-        thHtml += `<th style="background-color:#d35400;">รวมความต้องการ<br><span style="font-size:11px; color:#f1c40f;">(คลิกตัวเลข)</span></th>
+        thHtml += `<th style="background-color:#d35400;">รวม<br><span style="font-size:10px; color:#f1c40f;">(คลิก)</span></th>
                    <th style="background-color:#27ae60;">สต็อก D060</th>
-                   <th style="background-color:#2980b9;">ขาด/เหลือ<br><span style="font-size:11px; color:#f1c40f;">(คลิกตัวเลข)</span></th></tr>`;
+                   <th style="background-color:#8e44ad;">จัดสรร<br><span style="font-size:10px;">(รอนำเข้า)</span></th>
+                   <th style="background-color:#2980b9;">จัดซื้อ<br><span style="font-size:10px;">(รอรับของ)</span></th>
+                   <th style="background-color:#16a085;">คงคลัง<br><span style="font-size:10px;">(สต็อก+จัดสรร+จัดซื้อ)</span></th>
+                   <th style="background-color:#c0392b;">ขาด/เหลือ<br><span style="font-size:10px; color:#f1c40f;">(คลิก)</span></th></tr>`;
         document.getElementById('matHead').innerHTML = thHtml;
 
         applyFilters();
@@ -407,11 +378,19 @@
         document.getElementById('supFilter').value = 'ALL';
         document.getElementById('teamFilter').value = 'ALL';
         document.getElementById('categoryFilter').value = 'ALL';
+        document.getElementById('allocFilter').value = 'ALL';
+        document.getElementById('prpoFilter').value = 'ALL';
+        
         document.querySelectorAll('.chk-budget').forEach(c => c.checked = false);
         document.querySelectorAll('.chk-pend').forEach(c => c.checked = false);
+        
         activeMatFilter = ''; 
+        wbsSortDirection = ''; 
+        document.getElementById('sortIcon').innerText = '↕️';
+
         updateDropdownText('budgetDropdown', 'ทั้งหมด');
         updateDropdownText('pendDropdown', 'ทั้งหมด');
+        
         applyFilters();
     }
 
@@ -423,35 +402,97 @@
         }
     }
 
+    function sortTable1() {
+        if(wbsSortDirection === '' || wbsSortDirection === 'desc') {
+            wbsSortDirection = 'asc';
+            document.getElementById('sortIcon').innerText = ' 🔼';
+        } else {
+            wbsSortDirection = 'desc';
+            document.getElementById('sortIcon').innerText = ' 🔽';
+        }
+        applySortAndRenderTable1();
+    }
+
+    function applySortAndRenderTable1() {
+        if(wbsSortDirection === 'asc') {
+            currentWBSList.sort((a, b) => a.PendingItems - b.PendingItems);
+        } else if(wbsSortDirection === 'desc') {
+            currentWBSList.sort((a, b) => b.PendingItems - a.PendingItems);
+        }
+
+        let wbsHtml = '';
+        currentWBSList.forEach(r => {
+            wbsHtml += `<tr>
+                <td style="font-weight:bold; color:#2c3e50;" class="nowrap-col">${r.WBS}</td>
+                <td class="nowrap-col">${r.Network}</td>
+                <td class="desc-col">${r.ProjectName}</td>
+                <td class="nowrap-col"><span class="badge-status">${r.Status}</span></td>
+                <td class="nowrap-col"><span class="badge-team">${r.Team}</span></td>
+                <td class="nowrap-col">${r.Supervisor}</td>
+                <td class="num-col" style="background-color: #fdf2e9;">
+                    <span class="link-text" onclick="showWbsDetails('${r.WBS}')" title="คลิกเพื่อดูรายการวัสดุ">${r.PendingItems} รายการ 🔍</span>
+                </td>
+                <td class="nowrap-col" style="color:#7f8c8d;">${r.PayDate}</td>
+                <td class="nowrap-col" style="color:#7f8c8d;">${r.BasicStart}</td>
+            </tr>`;
+        });
+        document.getElementById('wbsTableBody').innerHTML = wbsHtml || '<tr><td colspan="9" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
+    }
+
     function applyFilters() {
         const br = document.getElementById('branchFilter').value;
         const sup = document.getElementById('supFilter').value;
         const tm = document.getElementById('teamFilter').value;
         const cat = document.getElementById('categoryFilter').value;
+        const allocVal = document.getElementById('allocFilter').value;
+        const prpoVal = document.getElementById('prpoFilter').value;
 
         const selectedBudgets = Array.from(document.querySelectorAll('.chk-budget:checked')).map(c => c.value);
         const selectedPends = Array.from(document.querySelectorAll('.chk-pend:checked')).map(c => parseInt(c.value));
+
+        // ตรวจสอบพัสดุที่เข้าเงื่อนไข จัดสรร / จัดซื้อ
+        let allowedMats = null;
+        if (allocVal !== 'ALL' || prpoVal !== 'ALL') {
+            allowedMats = new Set();
+            let allMats = new Set(demandDetailsData.map(d => d['วัสดุ']));
+            allMats.forEach(mat => {
+                let hasAlloc = (allocMap[mat] || 0) > 0;
+                let hasPrpo = (prpoMap[mat] || 0) > 0;
+                let passAlloc = (allocVal === 'ALL') || (allocVal === 'HAS' && hasAlloc) || (allocVal === 'NONE' && !hasAlloc);
+                let passPrpo = (prpoVal === 'ALL') || (prpoVal === 'HAS' && hasPrpo) || (prpoVal === 'NONE' && !hasPrpo);
+                if (passAlloc && passPrpo) {
+                    allowedMats.add(mat);
+                }
+            });
+        }
 
         let wbsWithMat = null;
         if (activeMatFilter !== '') {
             wbsWithMat = new Set(demandDetailsData.filter(d => d['วัสดุ'] === activeMatFilter && d.Qty > 0).map(x => x.WBS));
         }
 
-        // เช็คเงื่อนไขทั่วไป (ที่ไม่ใช่ Branch, Team, Budget)
         const checkCommon = (r) => {
             let passSup = (sup === 'ALL' || r.Supervisor === sup);
             let passPend = (selectedPends.length === 0 || selectedPends.includes(r.PendingItems));
+            
             let passCat = true;
+            let requiredMats = demandDetailsData.filter(d => d.WBS === r.WBS && d.Qty > 0).map(d => d['วัสดุ']);
             if (cat !== 'ALL') {
-                let requiredMats = demandDetailsData.filter(d => d.WBS === r.WBS && d.Qty > 0).map(d => d['วัสดุ']);
                 let wbsCategories = requiredMats.map(mCode => {
                     let matInfo = mainData.find(m => m['วัสดุ'] === mCode);
                     return matInfo ? matInfo.Category : 'อื่นๆ';
                 });
                 passCat = wbsCategories.includes(cat);
             }
+            
             let passMat = wbsWithMat ? wbsWithMat.has(r.WBS) : true;
-            return passSup && passPend && passCat && passMat;
+            
+            let passAllocPrpo = true;
+            if (allowedMats) {
+                passAllocPrpo = requiredMats.some(m => allowedMats.has(m));
+            }
+
+            return passSup && passPend && passCat && passMat && passAllocPrpo;
         };
 
         const checkBr = (r) => (br === 'ALL' || r.Branch === br);
@@ -461,7 +502,6 @@
             return (selectedBudgets.length === 0 || selectedBudgets.includes(wbsGroup));
         };
 
-        // --- 1. คำนวณ Badge ของ กฟฟ. ---
         let branchSource = wbsSummaryData.filter(r => checkCommon(r) && checkTm(r) && checkBudg(r));
         let branchCounts = {};
         branchSource.forEach(r => { branchCounts[r.Branch] = (branchCounts[r.Branch] || 0) + 1; });
@@ -473,7 +513,6 @@
         });
         document.getElementById('branchBreakdown').innerHTML = branchBreakdownHtml;
 
-        // --- 2. คำนวณ Badge ของ งบ ---
         let budgetSource = wbsSummaryData.filter(r => checkCommon(r) && checkBr(r) && checkTm(r));
         let groupCounts = {};
         budgetSource.forEach(r => {
@@ -488,7 +527,6 @@
         });
         document.getElementById('wbsBreakdown').innerHTML = budgetBreakdownHtml;
 
-        // --- 3. คำนวณ Badge ของ ทีมงาน (แสดงเมื่อเลือกผู้ควบคุม) ---
         let teamBreakdownDiv = document.getElementById('teamBreakdown');
         if (sup !== 'ALL') {
             let teamSource = wbsSummaryData.filter(r => checkCommon(r) && checkBr(r) && checkBudg(r));
@@ -510,8 +548,19 @@
             teamBreakdownDiv.style.display = 'none';
         }
 
-        // --- 4. ดึงข้อมูลสุดท้ายสำหรับตาราง 1 และ 2 ---
-        currentWBSList = wbsSummaryData.filter(r => checkCommon(r) && checkBr(r) && checkTm(r) && checkBudg(r));
+        let baseWBSList = wbsSummaryData.filter(r => checkCommon(r) && checkBr(r) && checkTm(r) && checkBudg(r));
+        
+        let wbsListForTable2 = wbsSummaryData.filter(r => {
+            let passBr = (br === 'ALL' || r.Branch === br);
+            let passSup = (sup === 'ALL' || r.Supervisor === sup);
+            let passTm = (tm === 'ALL' || r.Team === tm);
+            let wbsGroup = getProjectGroup(r.WBS);
+            let passBudg = (selectedBudgets.length === 0 || selectedBudgets.includes(wbsGroup));
+            let passPend = (selectedPends.length === 0 || selectedPends.includes(r.PendingItems));
+            return passBr && passSup && passTm && passBudg && passPend;
+        });
+
+        currentWBSList = baseWBSList;
 
         document.getElementById('wbsCount').innerText = currentWBSList.length;
 
@@ -521,25 +570,8 @@
         }
         document.getElementById('wbsCountText').innerHTML = `📝 ยอดรวม WBS ค้างจ่ายพัสดุ (ตามตัวกรอง) ${filterText}`;
 
-        let wbsHtml = '';
-        currentWBSList.forEach(r => {
-            wbsHtml += `<tr>
-                <td style="font-weight:bold; color:#2c3e50;">${r.WBS}</td>
-                <td style="text-align:center;">${r.Network}</td>
-                <td>${r.ProjectName}</td>
-                <td style="text-align:center;"><span class="badge-status">${r.Status}</span></td>
-                <td style="text-align:center;"><span class="badge-team">${r.Team}</span></td>
-                <td style="text-align:center;">${r.Supervisor}</td>
-                <td class="num-col" style="background-color: #fdf2e9;">
-                    <span class="link-text" onclick="showWbsDetails('${r.WBS}')" title="คลิกเพื่อดูรายการวัสดุ">${r.PendingItems} รายการ 🔍</span>
-                </td>
-                <td style="text-align:center; color:#7f8c8d;">${r.PayDate}</td>
-                <td style="text-align:center; color:#7f8c8d;">${r.BasicStart}</td>
-            </tr>`;
-        });
-        document.getElementById('wbsTableBody').innerHTML = wbsHtml || '<tr><td colspan="9" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
-
-        renderDynamicTable2(currentWBSList);
+        applySortAndRenderTable1();
+        renderDynamicTable2(wbsListForTable2);
     }
 
     function renderDynamicTable2(baseList) {
@@ -569,6 +601,8 @@
 
         let dynamicMainData = Object.values(matAgg);
         const cat = document.getElementById('categoryFilter').value;
+        const allocVal = document.getElementById('allocFilter').value;
+        const prpoVal = document.getElementById('prpoFilter').value;
 
         if (cat !== 'ALL') {
             dynamicMainData = dynamicMainData.filter(m => {
@@ -577,8 +611,30 @@
             });
         }
 
-        dynamicMainData.forEach(r => r.Balance = r.Stock - r.Total_Demand);
+        if (allocVal !== 'ALL') {
+            dynamicMainData = dynamicMainData.filter(m => {
+                let hasAlloc = (allocMap[m['วัสดุ']] || 0) > 0;
+                return allocVal === 'HAS' ? hasAlloc : !hasAlloc;
+            });
+        }
+
+        if (prpoVal !== 'ALL') {
+            dynamicMainData = dynamicMainData.filter(m => {
+                let hasPrpo = (prpoMap[m['วัสดุ']] || 0) > 0;
+                return prpoVal === 'HAS' ? hasPrpo : !hasPrpo;
+            });
+        }
+
+        dynamicMainData.forEach(r => {
+            r.Allocated = allocMap[r['วัสดุ']] || 0;
+            r.Purchased = prpoMap[r['วัสดุ']] || 0;
+            r.TotalStock = r.Stock + r.Allocated + r.Purchased;
+            r.Balance = r.TotalStock - r.Total_Demand;
+        });
+        
         dynamicMainData.sort((a, b) => String(a['วัสดุ']).localeCompare(String(b['วัสดุ'])));
+        
+        window.currentDynamicMainData = dynamicMainData;
 
         let h = '';
         dynamicMainData.forEach(r => {
@@ -596,16 +652,21 @@
             let rowBg = (activeMatFilter === r['วัสดุ']) ? 'background-color: #fff3cd;' : ''; 
 
             h += `<tr style="${rowBg}">
-                <td style="text-align:center; font-weight:bold;">
+                <td style="font-weight:bold; text-align:center;" class="nowrap-col">
                     <span class="link-mat" onclick="filterTable1ByMat('${r['วัสดุ']}')" title="คลิกเพื่อกรองตาราง WBS ด้านบน">${r['วัสดุ']}</span>
                 </td>
-                <td>${r['คำอธิบายวัสดุ']}</td>
+                <td class="desc-col">${r['คำอธิบายวัสดุ']}</td>
                 ${pgCols}
                 <td class="num-col" style="background-color:#fdf2e9;">
                     <span class="link-num" style="color:#d35400;" onclick="showMatDetails('${r['วัสดุ']}', 'ALL')" title="ดูรายละเอียดรวม">${r.Total_Demand.toLocaleString()}</span>
                 </td>
                 <td class="num-col" style="color:#27ae60; font-weight:bold; background-color:#eafaf1;">${r.Stock.toLocaleString()}</td>
-                <td class="num-col" style="${balColor} font-weight:bold; background-color:#ebf5fb;">
+                
+                <td class="num-col" style="color:#8e44ad; font-weight:bold; background-color:#f4ecf7;">${r.Allocated.toLocaleString()}</td>
+                <td class="num-col" style="color:#2980b9; font-weight:bold; background-color:#ebf5fb;">${r.Purchased.toLocaleString()}</td>
+                <td class="num-col" style="color:#16a085; font-weight:bold; background-color:#e8f8f5;">${r.TotalStock.toLocaleString()}</td>
+                
+                <td class="num-col" style="${balColor} font-weight:bold; background-color:#fdedec;">
                     <span class="link-num" style="${balColor}" onclick="showMatDetails('${r['วัสดุ']}', 'ALL')">${r.Balance.toLocaleString()}</span>
                 </td>
             </tr>`;
@@ -622,18 +683,22 @@
         let h = '';
         data.forEach(r => {
             if(r.Qty > 0) { 
-                let balColor = r.Balance < 0 ? 'color: #e74c3c;' : 'color: #27ae60;';
+                let t2Data = window.currentDynamicMainData.find(m => m['วัสดุ'] === r['วัสดุ']);
+                let displayStock = t2Data ? t2Data.TotalStock : r.Stock;
+                let displayBalance = t2Data ? t2Data.Balance : r.Balance;
+                
+                let balColor = displayBalance < 0 ? 'color: #e74c3c;' : 'color: #27ae60;';
                 h += `<tr>
-                    <td style="text-align:center; font-weight:bold; color:#3498db;">
+                    <td style="text-align:center; font-weight:bold; color:#3498db;" class="nowrap-col">
                         <span class="link-text" onclick="showMatDetails('${r['วัสดุ']}', 'ALL')">${r['วัสดุ']}</span>
                     </td>
-                    <td>${r.MatDesc}</td>
-                    <td style="text-align:center; color:#7f8c8d;">${r.Network}</td>
+                    <td class="desc-col">${r.MatDesc}</td>
+                    <td style="text-align:center; color:#7f8c8d;" class="nowrap-col">${r.Network}</td>
                     <td class="num-col" style="color:#c0392b; font-weight:bold;">${r.Qty.toLocaleString()}</td>
-                    <td class="num-col" style="color:#2980b9; font-weight:bold;">${r.Stock.toLocaleString()}</td>
-                    <td class="num-col" style="${balColor} font-weight:bold;">${r.Balance.toLocaleString()}</td>
-                    <td style="text-align:center;"><span class="badge-status">${r.Status}</span></td>
-                    <td style="text-align:center;">${r.Applicant}</td>
+                    <td class="num-col" style="color:#16a085; font-weight:bold;">${displayStock.toLocaleString()}</td>
+                    <td class="num-col" style="${balColor} font-weight:bold;">${displayBalance.toLocaleString()}</td>
+                    <td style="text-align:center;" class="nowrap-col"><span class="badge-status">${r.Status}</span></td>
+                    <td style="text-align:center;" class="nowrap-col">${r.Applicant}</td>
                 </tr>`;
             }
         });
@@ -661,15 +726,15 @@
 
                 if(showRow) {
                     h += `<tr>
-                        <td style="font-weight:bold; color:#3498db;">
+                        <td style="font-weight:bold; color:#3498db;" class="nowrap-col">
                             <span class="link-text" onclick="showWbsDetails('${r.WBS}')">${r.WBS}</span>
                         </td>
-                        <td style="text-align:center; color:#7f8c8d;">${r.Network}</td>
-                        <td>${r.Project_Name}</td>
+                        <td style="text-align:center; color:#7f8c8d;" class="nowrap-col">${r.Network}</td>
+                        <td class="desc-col">${r.Project_Name}</td>
                         <td class="num-col" style="font-weight:bold;">${r.Qty.toLocaleString()}</td>
                         <td class="num-col" style="color:#e74c3c; font-weight:bold;">${r.PendingCount || '-'}</td>
-                        <td style="text-align:center;"><span class="badge-status">${r.Status}</span></td>
-                        <td style="text-align:center;">${r.Applicant}</td>
+                        <td style="text-align:center;" class="nowrap-col"><span class="badge-status">${r.Status}</span></td>
+                        <td style="text-align:center;" class="nowrap-col">${r.Applicant}</td>
                     </tr>`;
                 }
             }
