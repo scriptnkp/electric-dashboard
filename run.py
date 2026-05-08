@@ -4,6 +4,7 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
+# 1. ตั้งค่าไฟล์เป็น .txt ทั้งหมด 100%
 file_mb52 = '6.mb52.txt'       
 file_zmb25 = '11.zmb25.txt'      
 file_cn43n = '14.CN43N.txt'     
@@ -15,7 +16,7 @@ file_budget_p = 'P.txt'
 file_budget_n = 'N.txt'
 file_z005 = 'z005.txt'
 file_n_z005 = 'n-z005.txt'
-file_z048 = 'z048.txt' # เพิ่มไฟล์ใหม่
+file_z048 = 'z048.txt' # <--- เพิ่มตัวแปรนี้เข้ามาแก้ Error ครับ
 
 print("กำลังอ่านไฟล์ TXT ทั้งหมด...")
 
@@ -77,7 +78,7 @@ df_demand['ปริมาณผลต่าง'] = df_demand['ปริมา�
 df_proj = read_sap_txt(file_cn43n)
 df_proj = ensure_cols(df_proj, ['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร', 'วท.ชำระ', 'Basic strt'])
 
-# === เพิ่มการอ่านไฟล์ z048 ===
+# === เพิ่มการอ่านไฟล์ z048 เพื่อคำนวณค่าใช้จ่าย ===
 df_z048 = read_sap_txt(file_z048)
 df_z048 = ensure_cols(df_z048, ['WBS', 'Network', 'Pln.ค่าแรง', 'Pln.ค่าควบคุมงาน', 'Pln.ค่าขนส่ง', 'Pln.ค่าเบ็ดเตล็ด', 'Act.ค่าแรง', 'Act.ค่าควบคุมงาน', 'Act.ค่าขนส่ง', 'Act.ค่าเบ็ดเตล็ด'], 0)
 
@@ -91,7 +92,7 @@ if not df_z048.empty:
     df_z048['Pln.Total'] = df_z048['Pln.ค่าแรง'] + df_z048['Pln.ค่าควบคุมงาน'] + df_z048['Pln.ค่าขนส่ง'] + df_z048['Pln.ค่าเบ็ดเตล็ด']
     df_z048['Act.Total'] = df_z048['Act.ค่าแรง'] + df_z048['Act.ค่าควบคุมงาน'] + df_z048['Act.ค่าขนส่ง'] + df_z048['Act.ค่าเบ็ดเตล็ด']
     
-    # รวมโครงข่าย (Network) ภายใต้ WBS เดียวกัน
+    # รวมค่าใช้จ่ายเข้า WBS 
     cost_by_wbs = df_z048[df_z048['Network'] != ''].groupby('WBS')[['Pln.Total', 'Act.Total']].sum().reset_index()
 else:
     cost_by_wbs = pd.DataFrame(columns=['WBS', 'Pln.Total', 'Act.Total'])
@@ -189,7 +190,7 @@ for _, r in wbs_summary_df.iterrows():
         'Branch': str(r['Branch']),
         'Supervisor': str(r['Supervisor']),
         'Team': str(r['Team']),
-        'CostText': str(r['CostText']) # ส่งข้อความค่าใช้จ่ายออกไป HTML
+        'CostText': str(r['CostText'])
     })
 
 mat_desc_demand = df_demand[['วัสดุ', 'คำอธิบายวัสดุ']].copy()
@@ -198,7 +199,7 @@ mat_desc = pd.concat([mat_desc_demand, mat_desc_stock])
 mat_desc['คำอธิบายวัสดุ'] = mat_desc['คำอธิบายวัสดุ'].astype(str).replace(r'^\s*$', pd.NA, regex=True)
 mat_desc = mat_desc.dropna(subset=['คำอธิบายวัสดุ']).drop_duplicates(subset=['วัสดุ'], keep='first')
 
-demand_details = pd.merge(df_demand_pending, stock_summary, on='วัสดุ', how='left').fillna(0)
+demand_details = pd.merge(df_demand_pending.drop(columns=['คำอธิบายวัสดุ'], errors='ignore'), stock_summary, on='วัสดุ', how='left').fillna(0)
 demand_details = pd.merge(demand_details, mat_desc, on='วัสดุ', how='left').fillna('-ไม่ระบุ-')
 demand_details['Balance'] = demand_details['Stock'] - demand_details['ปริมาณผลต่าง']
 demand_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'ปริมาณผลต่าง': 'Qty', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
