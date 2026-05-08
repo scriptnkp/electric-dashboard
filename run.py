@@ -4,7 +4,6 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
-# 1. ตั้งค่าไฟล์เป็น .txt ทั้งหมด 100%
 file_mb52 = '6.mb52.txt'       
 file_zmb25 = '11.zmb25.txt'      
 file_cn43n = '14.CN43N.txt'     
@@ -16,6 +15,7 @@ file_budget_p = 'P.txt'
 file_budget_n = 'N.txt'
 file_z005 = 'z005.txt'
 file_n_z005 = 'n-z005.txt'
+file_z048 = 'z048.txt' # เพิ่มไฟล์ใหม่
 
 print("กำลังอ่านไฟล์ TXT ทั้งหมด...")
 
@@ -33,7 +33,7 @@ def read_sap_txt(filepath):
         if line.startswith('|'):
             parts = [p.strip() for p in line.split('|')[1:-1]]
             if not headers:
-                if any(k in p for p in parts for k in ['วัสดุ', 'องค์ประกอบ WBS', 'รง.', 'Lev']):
+                if any(k in p for p in parts for k in ['วัสดุ', 'องค์ประกอบ WBS', 'รง.', 'Lev', 'ค่าแรง']):
                     headers = [h.strip() for h in parts]
             elif headers:
                 if not parts[0].startswith('---'):
@@ -77,8 +77,26 @@ df_demand['ปริมาณผลต่าง'] = df_demand['ปริมา�
 df_proj = read_sap_txt(file_cn43n)
 df_proj = ensure_cols(df_proj, ['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร', 'วท.ชำระ', 'Basic strt'])
 
-renames_me2n = {'รง.': 'โรงงาน', 'ผู้ขาย/โรงงานจัดหา': 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'SLoc': 'ที่เก็บสินค้า', 'เอกสารซื้อ': 'เอกสารการจัดซื้อ', 'To be del.': 'ยังจะถูกส่งมอบ (ปริมาณ)', 'PGr': 'กลุ่มการจัดซื้อ', 'วันส่งมอบ': 'วันที่ส่งมอบ'}
+# === เพิ่มการอ่านไฟล์ z048 ===
+df_z048 = read_sap_txt(file_z048)
+df_z048 = ensure_cols(df_z048, ['WBS', 'Network', 'Pln.ค่าแรง', 'Pln.ค่าควบคุมงาน', 'Pln.ค่าขนส่ง', 'Pln.ค่าเบ็ดเตล็ด', 'Act.ค่าแรง', 'Act.ค่าควบคุมงาน', 'Act.ค่าขนส่ง', 'Act.ค่าเบ็ดเตล็ด'], 0)
 
+if not df_z048.empty:
+    df_z048['Network'] = df_z048['Network'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
+    df_z048['WBS'] = df_z048['WBS'].astype(str).str.strip()
+    
+    for col in ['Pln.ค่าแรง', 'Pln.ค่าควบคุมงาน', 'Pln.ค่าขนส่ง', 'Pln.ค่าเบ็ดเตล็ด', 'Act.ค่าแรง', 'Act.ค่าควบคุมงาน', 'Act.ค่าขนส่ง', 'Act.ค่าเบ็ดเตล็ด']:
+        df_z048[col] = df_z048[col].apply(parse_sap_num)
+        
+    df_z048['Pln.Total'] = df_z048['Pln.ค่าแรง'] + df_z048['Pln.ค่าควบคุมงาน'] + df_z048['Pln.ค่าขนส่ง'] + df_z048['Pln.ค่าเบ็ดเตล็ด']
+    df_z048['Act.Total'] = df_z048['Act.ค่าแรง'] + df_z048['Act.ค่าควบคุมงาน'] + df_z048['Act.ค่าขนส่ง'] + df_z048['Act.ค่าเบ็ดเตล็ด']
+    
+    # รวมโครงข่าย (Network) ภายใต้ WBS เดียวกัน
+    cost_by_wbs = df_z048[df_z048['Network'] != ''].groupby('WBS')[['Pln.Total', 'Act.Total']].sum().reset_index()
+else:
+    cost_by_wbs = pd.DataFrame(columns=['WBS', 'Pln.Total', 'Act.Total'])
+
+renames_me2n = {'รง.': 'โรงงาน', 'ผู้ขาย/โรงงานจัดหา': 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'SLoc': 'ที่เก็บสินค้า', 'เอกสารซื้อ': 'เอกสารการจัดซื้อ', 'To be del.': 'ยังจะถูกส่งมอบ (ปริมาณ)', 'PGr': 'กลุ่มการจัดซื้อ', 'วันส่งมอบ': 'วันที่ส่งมอบ'}
 df_me2n = read_sap_txt(file_me2n)
 df_me2n.rename(columns=renames_me2n, inplace=True)
 df_me2n = ensure_cols(df_me2n, ['โรงงาน', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'เอกสารการจัดซื้อ', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'กลุ่มการจัดซื้อ', 'วันที่ส่งมอบ', 'วัสดุ', 'ข้อความสั้น', 'ข้อความส่วนหัว'])
@@ -89,7 +107,6 @@ df_me2n1 = ensure_cols(df_me2n1, ['โรงงาน', 'ผู้ขาย/โ�
 
 cat_map = {'1-00-001': 'ผลิตภัณฑ์คอนกรีต', '1-02-001': 'สายไฟ', '1-03-000': 'ลูกถ้วย', '1-04-000': 'แก้ไฟ', '1-05-000': 'หม้อแปลง'}
 def get_category(mat_code): return cat_map.get(str(mat_code)[:8], 'วัสดุอื่นๆ')
-
 def get_short_status(x):
     if pd.isna(x) or str(x) == '-': return "-"
     parts = str(x).replace('//', '').strip().split()
@@ -136,18 +153,33 @@ else:
     wbs_summary_grp = pd.DataFrame(columns=['องค์ประกอบ WBS', 'โครงข่าย', 'PendingItems'])
 
 wbs_summary_df = pd.merge(wbs_summary_grp, df_proj, on='องค์ประกอบ WBS', how='left').fillna('-')
+wbs_summary_df.rename(columns={'องค์ประกอบ WBS': 'WBS'}, inplace=True)
 wbs_summary_df = ensure_cols(wbs_summary_df, ['ชื่อ', 'สถานะ', 'ผู้สมัคร', 'วท.ชำระ', 'Basic strt'])
 
-wbs_summary_df['Branch'] = wbs_summary_df['องค์ประกอบ WBS'].apply(get_branch)
+wbs_summary_df['Branch'] = wbs_summary_df['WBS'].apply(get_branch)
 wbs_summary_df['Team'] = wbs_summary_df['ชื่อ'].apply(get_team)
 wbs_summary_df['Supervisor'] = wbs_summary_df['ผู้สมัคร'].replace('', '-').fillna('-')
 wbs_summary_df['Status_Short'] = wbs_summary_df['สถานะ'].apply(get_short_status)
 wbs_summary_df['Network'] = wbs_summary_df['โครงข่าย'].fillna('-').astype(str).str.replace(r'\.0$', '', regex=True)
 
+# จับคู่ค่าใช้จ่ายเข้ากับ WBS
+wbs_summary_df = pd.merge(wbs_summary_df, cost_by_wbs, on='WBS', how='left').fillna(0)
+
+def format_cost(row):
+    act = float(row.get('Act.Total', 0))
+    pln = float(row.get('Pln.Total', 0))
+    if pln == 0:
+        if act == 0: return "-"
+        return f"100% = {act:,.0f}"
+    pct = (act / pln) * 100
+    return f"{pct:.0f}% = {act:,.0f}"
+
+wbs_summary_df['CostText'] = wbs_summary_df.apply(format_cost, axis=1)
+
 wbs_summary_data = []
 for _, r in wbs_summary_df.iterrows():
     wbs_summary_data.append({
-        'WBS': str(r['องค์ประกอบ WBS']),
+        'WBS': str(r['WBS']),
         'Network': str(r['Network']),
         'ProjectName': str(r['ชื่อ']),
         'Status': str(r['Status_Short']),
@@ -156,7 +188,8 @@ for _, r in wbs_summary_df.iterrows():
         'BasicStart': str(r['Basic strt']),
         'Branch': str(r['Branch']),
         'Supervisor': str(r['Supervisor']),
-        'Team': str(r['Team'])
+        'Team': str(r['Team']),
+        'CostText': str(r['CostText']) # ส่งข้อความค่าใช้จ่ายออกไป HTML
     })
 
 mat_desc_demand = df_demand[['วัสดุ', 'คำอธิบายวัสดุ']].copy()
@@ -169,7 +202,6 @@ demand_details = pd.merge(df_demand_pending, stock_summary, on='วัสดุ'
 demand_details = pd.merge(demand_details, mat_desc, on='วัสดุ', how='left').fillna('-ไม่ระบุ-')
 demand_details['Balance'] = demand_details['Stock'] - demand_details['ปริมาณผลต่าง']
 demand_details.rename(columns={'องค์ประกอบ WBS': 'WBS', 'ปริมาณผลต่าง': 'Qty', 'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
-demand_details = ensure_cols(demand_details, ['WBS', 'วัสดุ', 'MatDesc', 'Qty', 'Stock', 'Balance'])
 demand_details_data = demand_details[['WBS', 'วัสดุ', 'MatDesc', 'Qty', 'Stock', 'Balance']].to_dict(orient='records')
 
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
