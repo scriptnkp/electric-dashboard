@@ -37,9 +37,9 @@
         /* สไตล์ Modal */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(2px);}
         .modal-overlay.active { display: flex; }
-        .modal-content { background: white; width: 95%; max-width: 1200px; border-radius: 12px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2);}
-        .modal-header { background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-radius: 12px 12px 0 0; font-size: 18px; font-weight: bold; border-bottom: 4px solid #1abc9c;}
-        .modal-body { padding: 0; overflow-y: auto; border-radius: 0 0 12px 12px;}
+        .modal-content { background: white; width: 95%; max-width: 1200px; border-radius: 12px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden;}
+        .modal-header { background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; border-bottom: 4px solid #1abc9c; position: relative; z-index: 20;}
+        .modal-body { padding: 0; overflow-y: auto; }
         .close-btn { background: #e74c3c; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; font-weight: bold; transition: 0.2s; font-size: 14px;}
         .close-btn:hover { background: #c0392b; }
 
@@ -120,22 +120,6 @@
                 </div>
             </div>
             <div>
-                <label>🚚 จัดสรร (รอนำเข้า): </label>
-                <select id="allocFilter" onchange="applyFilters()">
-                    <option value="ALL">✅ ทั้งหมด</option>
-                    <option value="HAS">📌 มีจัดสรร</option>
-                    <option value="NONE">❌ ไม่มีจัดสรร</option>
-                </select>
-            </div>
-            <div>
-                <label>🛒 จัดซื้อ (รอรับของ): </label>
-                <select id="prpoFilter" onchange="applyFilters()">
-                    <option value="ALL">✅ ทั้งหมด</option>
-                    <option value="HAS">📌 มีจัดซื้อ</option>
-                    <option value="NONE">❌ ไม่มีจัดซื้อ</option>
-                </select>
-            </div>
-            <div>
                 <button class="btn-reset" onclick="resetFilters()">🔄 ล้างตัวกรอง</button>
             </div>
         </div>
@@ -156,7 +140,16 @@
             </div>
         </div>
 
-        <h3 style="margin-bottom: 10px; color:#2980b9;">📌 ตารางที่ 1: รายชื่อ WBS ที่ค้างจ่ายพัสดุ</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; color:#2980b9;">📌 ตารางที่ 1: รายชื่อ WBS ที่ค้างจ่ายพัสดุ</h3>
+            
+            <div style="display: flex; align-items: center; gap: 8px; background: #ebf5fb; padding: 5px 12px; border-radius: 6px; border: 1px solid #bce0fd;">
+                <label style="font-weight:bold; color:#2980b9; font-size:13px; margin: 0;">🔍 ค้นหา WBS:</label>
+                <input type="text" id="wbsFilterInput" list="wbsDataList" placeholder="พิมพ์หรือเลือก WBS..." oninput="applyFilters()" style="padding:6px; border-radius:4px; border:1px solid #ccc; font-size:13px; width: 220px;">
+                <datalist id="wbsDataList"></datalist>
+            </div>
+        </div>
+
         <div class="table-wrapper">
             <table>
                 <thead>
@@ -176,7 +169,29 @@
             </table>
         </div>
 
-        <h3 style="margin-bottom: 10px; color:#c0392b; border-top: 2px dashed #eee; padding-top: 15px;">📦 ตารางที่ 2: สรุปความต้องการวัสดุรวม (ตามตารางด้านบนเรียงรหัสวัสดุ)</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px dashed #eee; padding-top: 15px; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <h3 style="margin: 0; color:#c0392b;">📦 ตารางที่ 2: สรุปความต้องการวัสดุรวม (ตามตารางด้านบนเรียงรหัสวัสดุ)</h3>
+            
+            <div style="display: flex; gap: 15px; background: #fdf2e9; padding: 5px 12px; border-radius: 6px; border: 1px solid #f5cba7;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label style="font-weight:bold; color:#8e44ad; font-size:13px; margin: 0;">🚚 จัดสรร (รอนำเข้า):</label>
+                    <select id="allocFilter" onchange="applyFilters()" style="padding:4px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
+                        <option value="ALL">✅ ทั้งหมด</option>
+                        <option value="HAS">📌 มี</option>
+                        <option value="NONE">❌ ไม่มี</option>
+                    </select>
+                </div>
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label style="font-weight:bold; color:#2980b9; font-size:13px; margin: 0;">🛒 จัดซื้อ (รอรับของ):</label>
+                    <select id="prpoFilter" onchange="applyFilters()" style="padding:4px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
+                        <option value="ALL">✅ ทั้งหมด</option>
+                        <option value="HAS">📌 มี</option>
+                        <option value="NONE">❌ ไม่มี</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
         <div class="table-wrapper" style="max-height: 70vh;">
             <table>
                 <thead id="matHead"></thead>
@@ -284,16 +299,25 @@
         const supervisors = [...new Set(wbsSummaryData.map(item => item.Supervisor))].filter(s => s !== '-').sort();
         const teams = [...new Set(wbsSummaryData.map(item => item.Team))].filter(t => t !== '-').sort();
         const categories = [...new Set(mainData.map(item => item.Category))].filter(c => c !== '-ไม่ระบุ-').sort();
+        const wbsList = [...new Set(wbsSummaryData.map(item => item.WBS))].sort(); 
 
         const brSel = document.getElementById('branchFilter');
         const supSel = document.getElementById('supFilter');
         const tmSel = document.getElementById('teamFilter');
         const catSel = document.getElementById('categoryFilter');
+        const wbsDataList = document.getElementById('wbsDataList');
 
         branches.forEach(b => brSel.appendChild(new Option(b, b)));
         supervisors.forEach(s => supSel.appendChild(new Option(s, s)));
         teams.forEach(t => tmSel.appendChild(new Option(t, t)));
         categories.forEach(c => catSel.appendChild(new Option(c, c)));
+        
+        // เติมข้อมูลใส่ Datalist สำหรับค้นหา WBS
+        wbsList.forEach(w => {
+            let opt = document.createElement('option');
+            opt.value = w;
+            wbsDataList.appendChild(opt);
+        });
 
         const budgetItemsDiv = document.getElementById('budgetDropdownItems');
         (projectGroups || []).sort().forEach(g => {
@@ -381,6 +405,9 @@
         document.getElementById('allocFilter').value = 'ALL';
         document.getElementById('prpoFilter').value = 'ALL';
         
+        // เคลียร์ค่าค้นหา WBS
+        document.getElementById('wbsFilterInput').value = '';
+        
         document.querySelectorAll('.chk-budget').forEach(c => c.checked = false);
         document.querySelectorAll('.chk-pend').forEach(c => c.checked = false);
         
@@ -446,11 +473,13 @@
         const cat = document.getElementById('categoryFilter').value;
         const allocVal = document.getElementById('allocFilter').value;
         const prpoVal = document.getElementById('prpoFilter').value;
+        
+        // ดึงค่า WBS ที่พิมพ์ค้นหา และลบช่องว่าง + ทำให้เป็นพิมพ์ใหญ่เพื่อเทียบได้เป๊ะขึ้น
+        const wbsSearchText = document.getElementById('wbsFilterInput').value.trim().toUpperCase();
 
         const selectedBudgets = Array.from(document.querySelectorAll('.chk-budget:checked')).map(c => c.value);
         const selectedPends = Array.from(document.querySelectorAll('.chk-pend:checked')).map(c => parseInt(c.value));
 
-        // ตรวจสอบพัสดุที่เข้าเงื่อนไข จัดสรร / จัดซื้อ
         let allowedMats = null;
         if (allocVal !== 'ALL' || prpoVal !== 'ALL') {
             allowedMats = new Set();
@@ -473,6 +502,8 @@
 
         const checkCommon = (r) => {
             let passSup = (sup === 'ALL' || r.Supervisor === sup);
+            // เช็คว่า WBS ในระบบ มีข้อความที่เราพิมพ์ค้นหาอยู่หรือไม่ (พิมพ์แค่บางส่วนก็เจอ)
+            let passWbsSearch = (wbsSearchText === '' || r.WBS.toUpperCase().includes(wbsSearchText));
             let passPend = (selectedPends.length === 0 || selectedPends.includes(r.PendingItems));
             
             let passCat = true;
@@ -492,7 +523,7 @@
                 passAllocPrpo = requiredMats.some(m => allowedMats.has(m));
             }
 
-            return passSup && passPend && passCat && passMat && passAllocPrpo;
+            return passSup && passWbsSearch && passPend && passCat && passMat && passAllocPrpo;
         };
 
         const checkBr = (r) => (br === 'ALL' || r.Branch === br);
@@ -554,10 +585,13 @@
             let passBr = (br === 'ALL' || r.Branch === br);
             let passSup = (sup === 'ALL' || r.Supervisor === sup);
             let passTm = (tm === 'ALL' || r.Team === tm);
+            
+            let passWbsSearch = (wbsSearchText === '' || r.WBS.toUpperCase().includes(wbsSearchText));
+            
             let wbsGroup = getProjectGroup(r.WBS);
             let passBudg = (selectedBudgets.length === 0 || selectedBudgets.includes(wbsGroup));
             let passPend = (selectedPends.length === 0 || selectedPends.includes(r.PendingItems));
-            return passBr && passSup && passTm && passBudg && passPend;
+            return passBr && passSup && passTm && passWbsSearch && passBudg && passPend;
         });
 
         currentWBSList = baseWBSList;
