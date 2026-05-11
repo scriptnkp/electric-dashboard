@@ -488,7 +488,12 @@
             }
         } catch(e) {}
 
-        let remColor = c.remain < 0 ? 'color: #e74c3c;' : 'color: #27ae60;';
+        // --- ส่วนที่แก้ไข: เพิ่มการคำนวณ Pln 80% ---
+        let pln80 = c.pln * 0.80;
+        let remain80 = pln80 - c.act;
+        let remColor = remain80 < 0 ? 'color: #e74c3c;' : 'color: #27ae60;';
+
+        const fmt = (num) => num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
         let html = `
             <div style="background: #f4ecf7; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center; border: 1px solid #d2b4de;">
@@ -499,32 +504,37 @@
             <div style="background: #fff; border: 1px solid #ddd; padding: 15px; border-radius: 8px;">
                 <div class="cost-row">
                     <span class="cost-label">💰 งบประมาณตั้งต้น (Pln.รวม):</span>
-                    <span class="cost-val" style="color: #2c3e50;">${c.pln.toLocaleString()} บาท</span>
+                    <span class="cost-val" style="color: #2c3e50;">${fmt(c.pln)} บาท</span>
                 </div>
+                <div class="cost-row" style="background: #f9ebea; padding: 10px; margin: 10px -15px;">
+                    <span class="cost-label" style="color: #8e44ad;">🎯 งบประมาณตั้งต้น (Pln 80%):</span>
+                    <span class="cost-val" style="color: #8e44ad;">${fmt(pln80)} บาท</span>
+                </div>
+
                 <div class="cost-row" style="background: #fdf2e9; padding: 10px; margin: 10px -15px;">
                     <span class="cost-label" style="color: #d35400;">🔥 เบิกจ่ายแล้วทั้งหมด (Act.รวม):</span>
-                    <span class="cost-val" style="color: #d35400;">${c.act.toLocaleString()} บาท</span>
+                    <span class="cost-val" style="color: #d35400;">${fmt(c.act)} บาท</span>
                 </div>
                 <div class="cost-row">
                     <span class="cost-label" style="padding-left: 20px;">👉 Act. ค่าแรง:</span>
-                    <span class="cost-val">${c.labor.toLocaleString()}</span>
+                    <span class="cost-val">${fmt(c.labor)}</span>
                 </div>
                 <div class="cost-row">
                     <span class="cost-label" style="padding-left: 20px;">👉 Act. ค่าควบคุมงาน:</span>
-                    <span class="cost-val">${c.control.toLocaleString()}</span>
+                    <span class="cost-val">${fmt(c.control)}</span>
                 </div>
                 <div class="cost-row">
                     <span class="cost-label" style="padding-left: 20px;">👉 Act. ค่าขนส่ง:</span>
-                    <span class="cost-val">${c.transport.toLocaleString()}</span>
+                    <span class="cost-val">${fmt(c.transport)}</span>
                 </div>
                 <div class="cost-row">
                     <span class="cost-label" style="padding-left: 20px;">👉 Act. ค่าเบ็ดเตล็ด:</span>
-                    <span class="cost-val">${c.misc.toLocaleString()}</span>
+                    <span class="cost-val">${fmt(c.misc)}</span>
                 </div>
                 
                 <div class="cost-row" style="margin-top: 15px; border-top: 2px solid #eee; padding-top: 15px;">
-                    <span class="cost-label" style="font-size: 16px;">💵 งบประมาณคงเหลือ (Pln - Act):</span>
-                    <span class="cost-val" style="font-size: 18px; ${remColor}">${c.remain.toLocaleString()} บาท</span>
+                    <span class="cost-label" style="font-size: 16px;">💵 งบประมาณคงเหลือ (Pln 80% - Act):</span>
+                    <span class="cost-val" style="font-size: 18px; ${remColor}">${fmt(remain80)} บาท</span>
                 </div>
             </div>
         `;
@@ -909,7 +919,6 @@
     }
 
     function exportToExcel(tableId, filename) {
-        // ใช้ไลบรารี SheetJS (XLSX) เพื่อสร้างไฟล์ .xlsx ของแท้
         let table = document.getElementById(tableId);
         let wb = XLSX.utils.table_to_book(table, {sheet: "Sheet1"});
         XLSX.writeFile(wb, filename + '_' + new Date().toISOString().slice(0,10) + '.xlsx');
