@@ -38,9 +38,7 @@
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(2px);}
         .modal-overlay.active { display: flex; }
         .modal-content { background: white; width: 95%; max-width: 1200px; border-radius: 12px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden;}
-        
         .modal-content-small { background: white; width: 95%; max-width: 600px; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden;}
-
         .modal-header { background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; border-bottom: 4px solid #1abc9c; position: relative; z-index: 20;}
         .modal-body { padding: 0; overflow-y: auto; }
         .close-btn { background: #e74c3c; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; font-weight: bold; transition: 0.2s; font-size: 14px;}
@@ -59,6 +57,10 @@
         .btn-reset { padding: 6px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: 32px; width: 100%; font-size: 13px;}
         .btn-reset:hover { background: #c0392b; }
 
+        /* ปุ่ม Export Excel */
+        .btn-export { background-color: #27ae60; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 5px;}
+        .btn-export:hover { background-color: #219a52; box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
+
         .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e0e6ed; margin-bottom: 20px; align-items: end; }
         .filter-grid label { font-weight: bold; color: #34495e; display: block; margin-bottom: 5px; font-size: 13px; }
         .filter-grid select { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #ccc; height: 32px; font-size: 13px; }
@@ -75,7 +77,6 @@
         .sortable-th { cursor: pointer; transition: 0.2s; user-select: none;}
         .sortable-th:hover { background-color: #e67e22; }
 
-        /* สไตล์กล่องค่าใช้จ่าย */
         .cost-row { display: flex; justify-content: space-between; border-bottom: 1px dashed #eee; padding: 10px 0; }
         .cost-row:last-child { border-bottom: none; }
         .cost-label { font-weight: bold; color: #34495e; }
@@ -150,7 +151,10 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-            <h3 style="margin: 0; color:#2980b9;">📌 ตารางที่ 1: รายชื่อ WBS ที่ค้างจ่ายพัสดุ</h3>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h3 style="margin: 0; color:#2980b9;">📌 ตารางที่ 1: รายชื่อ WBS ที่ค้างจ่ายพัสดุ</h3>
+                <button class="btn-export" onclick="exportToExcel('tableWBS', 'WBS_List_Export')">📥 Export Excel</button>
+            </div>
             
             <div style="display: flex; align-items: center; gap: 8px; background: #ebf5fb; padding: 5px 12px; border-radius: 6px; border: 1px solid #bce0fd;">
                 <label style="font-weight:bold; color:#2980b9; font-size:13px; margin: 0;">🔍 ค้นหา WBS:</label>
@@ -160,7 +164,7 @@
         </div>
 
         <div class="table-wrapper">
-            <table>
+            <table id="tableWBS">
                 <thead>
                     <tr>
                         <th style="min-width: 140px;">WBS</th>
@@ -180,7 +184,10 @@
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px dashed #eee; padding-top: 15px; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
-            <h3 style="margin: 0; color:#c0392b;">📦 ตารางที่ 2: สรุปความต้องการวัสดุรวม (ตามตารางด้านบนเรียงรหัสวัสดุ)</h3>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h3 style="margin: 0; color:#c0392b;">📦 ตารางที่ 2: สรุปความต้องการวัสดุรวม (ตามตัวกรอง)</h3>
+                <button class="btn-export" onclick="exportToExcel('tableMat', 'Material_Summary_Export')">📥 Export Excel</button>
+            </div>
             
             <div style="display: flex; gap: 15px; background: #fdf2e9; padding: 5px 12px; border-radius: 6px; border: 1px solid #f5cba7;">
                 <div style="display: flex; align-items: center; gap: 5px;">
@@ -203,7 +210,7 @@
         </div>
 
         <div class="table-wrapper" style="max-height: 70vh;">
-            <table>
+            <table id="tableMat">
                 <thead id="matHead"></thead>
                 <tbody id="matTableBody"></tbody>
             </table>
@@ -425,7 +432,6 @@
         document.getElementById('categoryFilter').value = 'ALL';
         document.getElementById('allocFilter').value = 'ALL';
         document.getElementById('prpoFilter').value = 'ALL';
-        
         document.getElementById('wbsFilterInput').value = '';
         
         document.querySelectorAll('.chk-budget').forEach(c => c.checked = false);
@@ -460,7 +466,6 @@
         applySortAndRenderTable1();
     }
 
-    // ฟังก์ชันเปิด Modal ค่าใช้จ่าย
     function showCostDetails(wbsCode, costJsonStr) {
         document.getElementById('costModalTitle').innerHTML = `💸 รายละเอียดค่าใช้จ่าย: <span style="color:#f1c40f;">${wbsCode}</span>`;
         
@@ -524,7 +529,6 @@
 
         let wbsHtml = '';
         currentWBSList.forEach(r => {
-            // ทำกล่องคลิกโชว์ค่าใช้จ่าย (ดึงมาจาก run.py)
             let costHtml = `<span style="color:#bdc3c7;">-</span>`;
             if (r.CostData && r.CostData !== '-' && r.CostData !== 'NaN') {
                 try {
@@ -535,12 +539,11 @@
                         let pct = costParts[0].trim();
                         let amt = costParts[1].trim();
                         let pctNum = parseFloat(pct.replace('%', ''));
-                        let color = '#27ae60'; // เขียว
-                        if(pctNum >= 80 && pctNum < 100) color = '#f39c12'; // ส้ม
-                        else if(pctNum >= 100) color = '#c0392b'; // แดง
+                        let color = '#27ae60'; 
+                        if(pctNum >= 80 && pctNum < 100) color = '#f39c12'; 
+                        else if(pctNum >= 100) color = '#c0392b'; 
                         
-                        // สร้างปุ่มลิงก์ส่ง JSON ไปยัง Modal 3
-                        let safeJson = r.CostData.replace(/'/g, "&#39;"); // ป้องกัน Error โควท
+                        let safeJson = r.CostData.replace(/'/g, "&#39;");
                         costHtml = `<div class="link-text" onclick='showCostDetails("${r.WBS}", \`${safeJson}\`)' style="text-align:center;">
                                        <span style="color:${color}; font-size:14px;">${pct}</span> = <br>
                                        <span style="color:#2c3e50; font-weight:normal;">${amt}</span>
@@ -881,6 +884,37 @@
 
     function closeModal(modalId) {
         document.getElementById(modalId).classList.remove('active');
+    }
+
+    // ฟังก์ชัน Export Excel แบบเต็มระบบ (อิงหน้าจอที่โชว์)
+    function exportToExcel(tableId, filename) {
+        let table = document.getElementById(tableId);
+        let cloneTable = table.cloneNode(true);
+        let html = cloneTable.outerHTML;
+        
+        let template = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+        <meta charset="utf-8">
+        <style>
+            table { border-collapse: collapse; width: 100%; font-family: 'Sarabun', sans-serif;}
+            th, td { border: 1px solid #000; padding: 5px; font-size: 13px; text-align: left;}
+            th { background-color: #2c3e50; color: white; text-align: center;}
+            .num-col { text-align: right; }
+        </style>
+        </head>
+        <body>
+            ${html}
+        </body>
+        </html>`;
+        
+        let blob = new Blob(['\ufeff' + template], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = filename + '_' + new Date().toISOString().slice(0,10) + '.xls';
+        a.click();
+        URL.revokeObjectURL(url);
     }
 
     window.onload = init;
