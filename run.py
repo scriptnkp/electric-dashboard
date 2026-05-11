@@ -16,7 +16,7 @@ file_budget_p = 'P.txt'
 file_budget_n = 'N.txt'
 file_z005 = 'z005.txt'
 file_n_z005 = 'n-z005.txt'
-file_z048 = 'z048.txt' # <--- เพิ่มตัวแปรนี้เข้ามาแก้ Error ครับ
+file_z048 = 'z048.txt' 
 
 print("กำลังอ่านไฟล์ TXT ทั้งหมด...")
 
@@ -78,7 +78,7 @@ df_demand['ปริมาณผลต่าง'] = df_demand['ปริมา�
 df_proj = read_sap_txt(file_cn43n)
 df_proj = ensure_cols(df_proj, ['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร', 'วท.ชำระ', 'Basic strt'])
 
-# === เพิ่มการอ่านไฟล์ z048 เพื่อคำนวณค่าใช้จ่าย ===
+# === เพิ่มการอ่านไฟล์ z048 เพื่อคำนวณค่าใช้จ่าย (ดึงตัวย่อยมาด้วย) ===
 df_z048 = read_sap_txt(file_z048)
 df_z048 = ensure_cols(df_z048, ['WBS', 'Network', 'Pln.ค่าแรง', 'Pln.ค่าควบคุมงาน', 'Pln.ค่าขนส่ง', 'Pln.ค่าเบ็ดเตล็ด', 'Act.ค่าแรง', 'Act.ค่าควบคุมงาน', 'Act.ค่าขนส่ง', 'Act.ค่าเบ็ดเตล็ด'], 0)
 
@@ -92,10 +92,17 @@ if not df_z048.empty:
     df_z048['Pln.Total'] = df_z048['Pln.ค่าแรง'] + df_z048['Pln.ค่าควบคุมงาน'] + df_z048['Pln.ค่าขนส่ง'] + df_z048['Pln.ค่าเบ็ดเตล็ด']
     df_z048['Act.Total'] = df_z048['Act.ค่าแรง'] + df_z048['Act.ค่าควบคุมงาน'] + df_z048['Act.ค่าขนส่ง'] + df_z048['Act.ค่าเบ็ดเตล็ด']
     
-    # รวมค่าใช้จ่ายเข้า WBS 
-    cost_by_wbs = df_z048[df_z048['Network'] != ''].groupby('WBS')[['Pln.Total', 'Act.Total']].sum().reset_index()
+    # รวมค่าใช้จ่ายเข้า WBS แบบแยกรายการ
+    cost_by_wbs = df_z048[df_z048['Network'] != ''].groupby('WBS').agg({
+        'Pln.Total': 'sum',
+        'Act.Total': 'sum',
+        'Act.ค่าแรง': 'sum',
+        'Act.ค่าควบคุมงาน': 'sum',
+        'Act.ค่าขนส่ง': 'sum',
+        'Act.ค่าเบ็ดเตล็ด': 'sum'
+    }).reset_index()
 else:
-    cost_by_wbs = pd.DataFrame(columns=['WBS', 'Pln.Total', 'Act.Total'])
+    cost_by_wbs = pd.DataFrame(columns=['WBS', 'Pln.Total', 'Act.Total', 'Act.ค่าแรง', 'Act.ค่าควบคุมงาน', 'Act.ค่าขนส่ง', 'Act.ค่าเบ็ดเตล็ด'])
 
 renames_me2n = {'รง.': 'โรงงาน', 'ผู้ขาย/โรงงานจัดหา': 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'SLoc': 'ที่เก็บสินค้า', 'เอกสารซื้อ': 'เอกสารการจัดซื้อ', 'To be del.': 'ยังจะถูกส่งมอบ (ปริมาณ)', 'PGr': 'กลุ่มการจัดซื้อ', 'วันส่งมอบ': 'วันที่ส่งมอบ'}
 df_me2n = read_sap_txt(file_me2n)
@@ -166,16 +173,36 @@ wbs_summary_df['Network'] = wbs_summary_df['โครงข่าย'].fillna('-
 # จับคู่ค่าใช้จ่ายเข้ากับ WBS
 wbs_summary_df = pd.merge(wbs_summary_df, cost_by_wbs, on='WBS', how='left').fillna(0)
 
+# จัดรูปแบบ JSON ให้เก็บรายละเอียดส่งไปตีความที่หน้าเว็บ
 def format_cost(row):
     act = float(row.get('Act.Total', 0))
     pln = float(row.get('Pln.Total', 0))
+    act_labor = float(row.get('Act.ค่าแรง', 0))
+    act_control = float(row.get('Act.ค่าควบคุมงาน', 0))
+    act_transport = float(row.get('Act.ค่าขนส่ง', 0))
+    act_misc = float(row.get('Act.ค่าเบ็ดเตล็ด', 0))
+
     if pln == 0:
         if act == 0: return "-"
-        return f"100% = {act:,.0f}"
-    pct = (act / pln) * 100
-    return f"{pct:.0f}% = {act:,.0f}"
+        pct_text = f"100% = {act:,.0f}"
+        remain = 0
+    else:
+        pct = (act / pln) * 100
+        pct_text = f"{pct:.0f}% = {act:,.0f}"
+        remain = pln - act
 
-wbs_summary_df['CostText'] = wbs_summary_df.apply(format_cost, axis=1)
+    return json.dumps({
+        'text': pct_text,
+        'pln': pln,
+        'act': act,
+        'remain': remain,
+        'labor': act_labor,
+        'control': act_control,
+        'transport': act_transport,
+        'misc': act_misc
+    })
+
+wbs_summary_df['CostData'] = wbs_summary_df.apply(format_cost, axis=1)
 
 wbs_summary_data = []
 for _, r in wbs_summary_df.iterrows():
@@ -190,7 +217,7 @@ for _, r in wbs_summary_df.iterrows():
         'Branch': str(r['Branch']),
         'Supervisor': str(r['Supervisor']),
         'Team': str(r['Team']),
-        'CostText': str(r['CostText'])
+        'CostData': str(r['CostData']) # ส่งข้อความ JSON ค่าใช้จ่ายออกไป
     })
 
 mat_desc_demand = df_demand[['วัสดุ', 'คำอธิบายวัสดุ']].copy()
