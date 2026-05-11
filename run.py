@@ -78,7 +78,6 @@ df_demand['ปริมาณผลต่าง'] = df_demand['ปริมา�
 df_proj = read_sap_txt(file_cn43n)
 df_proj = ensure_cols(df_proj, ['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร', 'วท.ชำระ', 'Basic strt'])
 
-# === เพิ่มการอ่านไฟล์ z048 เพื่อคำนวณค่าใช้จ่าย (ดึงตัวย่อยมาด้วย) ===
 df_z048 = read_sap_txt(file_z048)
 df_z048 = ensure_cols(df_z048, ['WBS', 'Network', 'Pln.ค่าแรง', 'Pln.ค่าควบคุมงาน', 'Pln.ค่าขนส่ง', 'Pln.ค่าเบ็ดเตล็ด', 'Act.ค่าแรง', 'Act.ค่าควบคุมงาน', 'Act.ค่าขนส่ง', 'Act.ค่าเบ็ดเตล็ด'], 0)
 
@@ -92,7 +91,6 @@ if not df_z048.empty:
     df_z048['Pln.Total'] = df_z048['Pln.ค่าแรง'] + df_z048['Pln.ค่าควบคุมงาน'] + df_z048['Pln.ค่าขนส่ง'] + df_z048['Pln.ค่าเบ็ดเตล็ด']
     df_z048['Act.Total'] = df_z048['Act.ค่าแรง'] + df_z048['Act.ค่าควบคุมงาน'] + df_z048['Act.ค่าขนส่ง'] + df_z048['Act.ค่าเบ็ดเตล็ด']
     
-    # รวมค่าใช้จ่ายเข้า WBS แบบแยกรายการ
     cost_by_wbs = df_z048[df_z048['Network'] != ''].groupby('WBS').agg({
         'Pln.Total': 'sum',
         'Act.Total': 'sum',
@@ -156,9 +154,14 @@ stock_summary = df_stock[(df_stock['โรงงาน'] == 'D060') & (df_stock[
 df_demand_pending = df_demand[df_demand['ปริมาณผลต่าง'] > 0].copy()
 
 if not df_demand_pending.empty:
-    wbs_summary_grp = df_demand_pending.groupby('องค์ประกอบ WBS').agg({'โครงข่าย': 'first', 'วัสดุ': 'nunique'}).reset_index().rename(columns={'วัสดุ': 'PendingItems'})
+    # เพิ่มการรวมยอดปริมาณผลต่าง (PendingQtySum) เข้าไปใน Groupby ด้วย
+    wbs_summary_grp = df_demand_pending.groupby('องค์ประกอบ WBS').agg({
+        'โครงข่าย': 'first', 
+        'วัสดุ': 'nunique',
+        'ปริมาณผลต่าง': 'sum'
+    }).reset_index().rename(columns={'วัสดุ': 'PendingItems', 'ปริมาณผลต่าง': 'PendingQtySum'})
 else:
-    wbs_summary_grp = pd.DataFrame(columns=['องค์ประกอบ WBS', 'โครงข่าย', 'PendingItems'])
+    wbs_summary_grp = pd.DataFrame(columns=['องค์ประกอบ WBS', 'โครงข่าย', 'PendingItems', 'PendingQtySum'])
 
 wbs_summary_df = pd.merge(wbs_summary_grp, df_proj, on='องค์ประกอบ WBS', how='left').fillna('-')
 wbs_summary_df.rename(columns={'องค์ประกอบ WBS': 'WBS'}, inplace=True)
@@ -173,7 +176,6 @@ wbs_summary_df['Network'] = wbs_summary_df['โครงข่าย'].fillna('-
 # จับคู่ค่าใช้จ่ายเข้ากับ WBS
 wbs_summary_df = pd.merge(wbs_summary_df, cost_by_wbs, on='WBS', how='left').fillna(0)
 
-# จัดรูปแบบ JSON ให้เก็บรายละเอียดส่งไปตีความที่หน้าเว็บ
 def format_cost(row):
     act = float(row.get('Act.Total', 0))
     pln = float(row.get('Pln.Total', 0))
@@ -211,13 +213,14 @@ for _, r in wbs_summary_df.iterrows():
         'Network': str(r['Network']),
         'ProjectName': str(r['ชื่อ']),
         'Status': str(r['Status_Short']),
-        'PendingItems': float(r['PendingItems']),
+        'PendingItems': float(r.get('PendingItems', 0)),
+        'PendingQtySum': float(r.get('PendingQtySum', 0)), # เก็บยอดคงเหลือ (ปริมาณ) ส่งไปหน้าเว็บ
         'PayDate': str(r['วท.ชำระ']),
         'BasicStart': str(r['Basic strt']),
         'Branch': str(r['Branch']),
         'Supervisor': str(r['Supervisor']),
         'Team': str(r['Team']),
-        'CostData': str(r['CostData']) # ส่งข้อความ JSON ค่าใช้จ่ายออกไป
+        'CostData': str(r['CostData']) 
     })
 
 mat_desc_demand = df_demand[['วัสดุ', 'คำอธิบายวัสดุ']].copy()

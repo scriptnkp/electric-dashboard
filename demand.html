@@ -175,6 +175,7 @@
                         <th>ทีมงาน</th>
                         <th>ผู้ควบคุม</th>
                         <th style="background-color: #d35400;" class="sortable-th" onclick="sortTable1()" title="คลิกเพื่อเรียงลำดับ">รก.คงเหลือ <span id="sortIcon">↕️</span></th>
+                        <th style="background-color: #e67e22;">ยอดคงเหลือ<br><span style="font-size:10px;">(รวมจำนวนชิ้น)</span></th>
                         <th>วท.ชำระ</th>
                         <th>วท.อ.เปิด</th>
                     </tr>
@@ -307,7 +308,7 @@
         if (typeof lastUpdated !== 'undefined') document.getElementById('lastUpdatedText').innerText = lastUpdated;
         
         if (typeof wbsSummaryData === 'undefined' || typeof demandDetailsData === 'undefined' || typeof mainData === 'undefined' || typeof projectGroups === 'undefined') {
-            document.getElementById('wbsTableBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:#e74c3c; padding:20px; font-weight:bold; font-size:16px;">⚠️ เซิร์ฟเวอร์กำลังอัปเดตข้อมูล โปรดรอสักครู่ แล้วกดรีเฟรชหน้าเว็บ (F5)</td></tr>';
+            document.getElementById('wbsTableBody').innerHTML = '<tr><td colspan="11" style="text-align:center; color:#e74c3c; padding:20px; font-weight:bold; font-size:16px;">⚠️ เซิร์ฟเวอร์กำลังอัปเดตข้อมูล โปรดรอสักครู่ แล้วกดรีเฟรชหน้าเว็บ (F5)</td></tr>';
             return;
         }
 
@@ -563,11 +564,12 @@
                 <td class="num-col" style="background-color: #fdf2e9;">
                     <span class="link-text" onclick="showWbsDetails('${r.WBS}')" title="คลิกเพื่อดูรายการวัสดุ">${r.PendingItems} รายการ 🔍</span>
                 </td>
+                <td class="num-col" style="font-weight:bold; color:#e67e22; background-color:#fdf2e9;">${(r.PendingQtySum || 0).toLocaleString()}</td>
                 <td class="nowrap-col" style="color:#7f8c8d;">${r.PayDate}</td>
                 <td class="nowrap-col" style="color:#7f8c8d;">${r.BasicStart}</td>
             </tr>`;
         });
-        document.getElementById('wbsTableBody').innerHTML = wbsHtml || '<tr><td colspan="10" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
+        document.getElementById('wbsTableBody').innerHTML = wbsHtml || '<tr><td colspan="11" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
     }
 
     function applyFilters() {
@@ -886,7 +888,6 @@
         document.getElementById(modalId).classList.remove('active');
     }
 
-    // ฟังก์ชัน Export Excel แบบเต็มระบบ (อิงหน้าจอที่โชว์)
     function exportToExcel(tableId, filename) {
         let table = document.getElementById(tableId);
         let cloneTable = table.cloneNode(true);
