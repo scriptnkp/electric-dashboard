@@ -456,6 +456,15 @@
         }
     }
 
+    // แก้ไขฟังก์ชัน sortTable1 ให้เรียงจากค่า SortValue ที่คำนวณใหม่
+    function getSortValue(r) {
+        if (activeMatFilter !== '') {
+            let specificDemand = demandDetailsData.find(d => d.WBS === r.WBS && d['วัสดุ'] === activeMatFilter);
+            return specificDemand ? specificDemand.Qty : 0;
+        }
+        return r.PendingItems;
+    }
+
     function sortTable1() {
         if(wbsSortDirection === '' || wbsSortDirection === 'desc') {
             wbsSortDirection = 'asc';
@@ -523,9 +532,9 @@
 
     function applySortAndRenderTable1() {
         if(wbsSortDirection === 'asc') {
-            currentWBSList.sort((a, b) => a.PendingItems - b.PendingItems);
+            currentWBSList.sort((a, b) => getSortValue(a) - getSortValue(b));
         } else if(wbsSortDirection === 'desc') {
-            currentWBSList.sort((a, b) => b.PendingItems - a.PendingItems);
+            currentWBSList.sort((a, b) => getSortValue(b) - getSortValue(a));
         }
 
         let wbsHtml = '';
@@ -553,6 +562,16 @@
                 } catch(e) { }
             }
 
+            // คำนวณยอด รก.คงเหลือ และ ยอดคงเหลือ (ชิ้น) ตามตัวกรองวัสดุ (activeMatFilter)
+            let displayItems = r.PendingItems;
+            let displayQtySum = r.PendingQtySum;
+            
+            if (activeMatFilter !== '') {
+                let specificDemand = demandDetailsData.find(d => d.WBS === r.WBS && d['วัสดุ'] === activeMatFilter);
+                displayItems = specificDemand && specificDemand.Qty > 0 ? 1 : 0;
+                displayQtySum = specificDemand ? specificDemand.Qty : 0;
+            }
+
             wbsHtml += `<tr>
                 <td style="font-weight:bold; color:#2c3e50;" class="nowrap-col">${r.WBS}</td>
                 <td class="nowrap-col">${r.Network}</td>
@@ -562,9 +581,9 @@
                 <td class="nowrap-col"><span class="badge-team">${r.Team}</span></td>
                 <td class="nowrap-col">${r.Supervisor}</td>
                 <td class="num-col" style="background-color: #fdf2e9;">
-                    <span class="link-text" onclick="showWbsDetails('${r.WBS}')" title="คลิกเพื่อดูรายการวัสดุ">${r.PendingItems} รายการ 🔍</span>
+                    <span class="link-text" onclick="showWbsDetails('${r.WBS}')" title="คลิกเพื่อดูรายการวัสดุ">${displayItems} รายการ 🔍</span>
                 </td>
-                <td class="num-col" style="font-weight:bold; color:#e67e22; background-color:#fdf2e9;">${(r.PendingQtySum || 0).toLocaleString()}</td>
+                <td class="num-col" style="font-weight:bold; color:#e67e22; background-color:#fdf2e9;">${(displayQtySum || 0).toLocaleString()}</td>
                 <td class="nowrap-col" style="color:#7f8c8d;">${r.PayDate}</td>
                 <td class="nowrap-col" style="color:#7f8c8d;">${r.BasicStart}</td>
             </tr>`;
