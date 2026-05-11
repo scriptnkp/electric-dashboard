@@ -22,6 +22,7 @@
 |  4|C-69-D-NKYXX.1000   |จัดซื้อพัสดุปี 2569                     |REL  BUDG ISBD AVAC  //  B2|D020  |D021|        |          |          |
 |  4|C-69-D-NPNXX.1000   |จัดซื้อพัสดุปี 2569                     |REL  BUDG AVAC  //  B2     |D060  |D061|        |          |          |
 |  4|C-69-D-PKNXX.1000   |จัดซื้อพัสดุปี 2569                     |REL  BUDG AVAC  //  B2     |D100  |D101|        |          |          |
+|  4|C-69-D-NPNTR.1000|จัดซื้อหม้อแปลงทดแทน|REL  BUDG AVAC  //  B2|D060  |D061|        |          |          |
 |  1|C-69-D-RAL          |งบผู้ใช้ไฟปี 69 ฉ.1                     |PREL BUDG AVAC  //  Z0     |D000  |D000|        |          |01.01.2026|
 |  4|C-69-D-SDDXX.1000   |จัดซื้อพัสดุปี 2569                     |REL  BUDG ISBD AVAC  //  B2|D100  |D102|        |          |          |
 |  4|C-69-D-SKKXX.1000   |จัดซื้อพัสดุปี 2569                     |REL  BUDG ISBD AVAC  //  B2|D050  |D051|        |          |          |
