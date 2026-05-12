@@ -4,7 +4,6 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
-# 1. ตั้งค่าไฟล์เป็น .txt ทั้งหมด 100%
 file_mb52 = '6.mb52.txt'       
 file_zmb25 = '11.zmb25.txt'      
 file_cn43n = '14.CN43N.txt'     
@@ -91,16 +90,21 @@ if not df_z048.empty:
     df_z048['Pln.Total'] = df_z048['Pln.ค่าแรง'] + df_z048['Pln.ค่าควบคุมงาน'] + df_z048['Pln.ค่าขนส่ง'] + df_z048['Pln.ค่าเบ็ดเตล็ด']
     df_z048['Act.Total'] = df_z048['Act.ค่าแรง'] + df_z048['Act.ค่าควบคุมงาน'] + df_z048['Act.ค่าขนส่ง'] + df_z048['Act.ค่าเบ็ดเตล็ด']
     
+    # เพิ่มการรวม Pln ย่อยด้วย
     cost_by_wbs = df_z048[df_z048['Network'] != ''].groupby('WBS').agg({
         'Pln.Total': 'sum',
         'Act.Total': 'sum',
+        'Pln.ค่าแรง': 'sum',
+        'Pln.ค่าควบคุมงาน': 'sum',
+        'Pln.ค่าขนส่ง': 'sum',
+        'Pln.ค่าเบ็ดเตล็ด': 'sum',
         'Act.ค่าแรง': 'sum',
         'Act.ค่าควบคุมงาน': 'sum',
         'Act.ค่าขนส่ง': 'sum',
         'Act.ค่าเบ็ดเตล็ด': 'sum'
     }).reset_index()
 else:
-    cost_by_wbs = pd.DataFrame(columns=['WBS', 'Pln.Total', 'Act.Total', 'Act.ค่าแรง', 'Act.ค่าควบคุมงาน', 'Act.ค่าขนส่ง', 'Act.ค่าเบ็ดเตล็ด'])
+    cost_by_wbs = pd.DataFrame(columns=['WBS', 'Pln.Total', 'Act.Total', 'Pln.ค่าแรง', 'Pln.ค่าควบคุมงาน', 'Pln.ค่าขนส่ง', 'Pln.ค่าเบ็ดเตล็ด', 'Act.ค่าแรง', 'Act.ค่าควบคุมงาน', 'Act.ค่าขนส่ง', 'Act.ค่าเบ็ดเตล็ด'])
 
 renames_me2n = {'รง.': 'โรงงาน', 'ผู้ขาย/โรงงานจัดหา': 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'SLoc': 'ที่เก็บสินค้า', 'เอกสารซื้อ': 'เอกสารการจัดซื้อ', 'To be del.': 'ยังจะถูกส่งมอบ (ปริมาณ)', 'PGr': 'กลุ่มการจัดซื้อ', 'วันส่งมอบ': 'วันที่ส่งมอบ'}
 df_me2n = read_sap_txt(file_me2n)
@@ -154,12 +158,7 @@ stock_summary = df_stock[(df_stock['โรงงาน'] == 'D060') & (df_stock[
 df_demand_pending = df_demand[df_demand['ปริมาณผลต่าง'] > 0].copy()
 
 if not df_demand_pending.empty:
-    # เพิ่มการรวมยอดปริมาณผลต่าง (PendingQtySum) เข้าไปใน Groupby ด้วย
-    wbs_summary_grp = df_demand_pending.groupby('องค์ประกอบ WBS').agg({
-        'โครงข่าย': 'first', 
-        'วัสดุ': 'nunique',
-        'ปริมาณผลต่าง': 'sum'
-    }).reset_index().rename(columns={'วัสดุ': 'PendingItems', 'ปริมาณผลต่าง': 'PendingQtySum'})
+    wbs_summary_grp = df_demand_pending.groupby('องค์ประกอบ WBS').agg({'โครงข่าย': 'first', 'วัสดุ': 'nunique', 'ปริมาณผลต่าง': 'sum'}).reset_index().rename(columns={'วัสดุ': 'PendingItems', 'ปริมาณผลต่าง': 'PendingQtySum'})
 else:
     wbs_summary_grp = pd.DataFrame(columns=['องค์ประกอบ WBS', 'โครงข่าย', 'PendingItems', 'PendingQtySum'])
 
@@ -179,10 +178,16 @@ wbs_summary_df = pd.merge(wbs_summary_df, cost_by_wbs, on='WBS', how='left').fil
 def format_cost(row):
     act = float(row.get('Act.Total', 0))
     pln = float(row.get('Pln.Total', 0))
-    act_labor = float(row.get('Act.ค่าแรง', 0))
-    act_control = float(row.get('Act.ค่าควบคุมงาน', 0))
-    act_transport = float(row.get('Act.ค่าขนส่ง', 0))
-    act_misc = float(row.get('Act.ค่าเบ็ดเตล็ด', 0))
+    
+    p_labor = float(row.get('Pln.ค่าแรง', 0))
+    p_control = float(row.get('Pln.ค่าควบคุมงาน', 0))
+    p_transport = float(row.get('Pln.ค่าขนส่ง', 0))
+    p_misc = float(row.get('Pln.ค่าเบ็ดเตล็ด', 0))
+    
+    a_labor = float(row.get('Act.ค่าแรง', 0))
+    a_control = float(row.get('Act.ค่าควบคุมงาน', 0))
+    a_transport = float(row.get('Act.ค่าขนส่ง', 0))
+    a_misc = float(row.get('Act.ค่าเบ็ดเตล็ด', 0))
 
     if pln == 0:
         if act == 0: return "-"
@@ -198,10 +203,14 @@ def format_cost(row):
         'pln': pln,
         'act': act,
         'remain': remain,
-        'labor': act_labor,
-        'control': act_control,
-        'transport': act_transport,
-        'misc': act_misc
+        'p_labor': p_labor,
+        'p_control': p_control,
+        'p_transport': p_transport,
+        'p_misc': p_misc,
+        'a_labor': a_labor,
+        'a_control': a_control,
+        'a_transport': a_transport,
+        'a_misc': a_misc
     })
 
 wbs_summary_df['CostData'] = wbs_summary_df.apply(format_cost, axis=1)
@@ -214,7 +223,7 @@ for _, r in wbs_summary_df.iterrows():
         'ProjectName': str(r['ชื่อ']),
         'Status': str(r['Status_Short']),
         'PendingItems': float(r.get('PendingItems', 0)),
-        'PendingQtySum': float(r.get('PendingQtySum', 0)), # เก็บยอดคงเหลือ (ปริมาณ) ส่งไปหน้าเว็บ
+        'PendingQtySum': float(r.get('PendingQtySum', 0)),
         'PayDate': str(r['วท.ชำระ']),
         'BasicStart': str(r['Basic strt']),
         'Branch': str(r['Branch']),
@@ -274,7 +283,7 @@ if not df_me2n_out.empty:
     df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] = df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'].apply(parse_sap_num)
     df_me2n_out['ที่เก็บสินค้า'] = df_me2n_out['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
     df_me2n_out['Category'] = df_me2n_out['วัสดุ'].apply(get_category)
-    plant_map = {'D010': 'D010 คลังพัสดุ อุดรธานี', 'D020': 'D020 คลังพัสดุ หนองคาย', 'D030': 'D030 คลังพัสดุ ขอนแก่น', 'D040': 'D040 คลังพัสดุ เลย', 'D050': 'D050 คลังพัสดุ สกลนคร', 'D060': 'D060 คลังพัสดุ นครพนม', 'D070': 'D070 คลังพัสดุ บึงกาฬ', 'D090': 'D090 คลังพัสดุ หนองหาน', 'D100': 'D100 คลังพัสดุ พังโคน', 'D110': 'D110 คลังพัสดุ หนองบัวลำภู', 'D120': 'D120 คลังพัสดุ บ้านไผ่', 'D130': 'D130 คลังพัสดุ บึงกาฬ'}
+    plant_map = {'D010': 'D010 คลังพัสดุ อุดรธานี', 'D020': 'D020 คลังพัสดุ หนองคาย', 'D030': 'D030 คลังพัสดุ หนองบัวลำภู', 'D040': 'D040 คลังพัสดุ เลย', 'D050': 'D050 คลังพัสดุ สกลนคร', 'D060': 'D060 คลังพัสดุ นครพนม', 'D070': 'D070 คลังพัสดุ บึงกาฬ', 'D090': 'D090 คลังพัสดุ หนองหาน', 'D100': 'D100 คลังพัสดุ พังโคน', 'D110': 'D110 คลังพัสดุ หนองบัวลำภู', 'D120': 'D120 คลังพัสดุ บ้านไผ่', 'D130': 'D130 คลังพัสดุ บึงกาฬ'}
     df_me2n_out['โรงงาน'] = df_me2n_out['โรงงาน'].apply(lambda x: plant_map.get(str(x).strip(), str(x).strip())).fillna('-ไม่ระบุ-')
 alloc_active = df_me2n_out[df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy() if not df_me2n_out.empty else pd.DataFrame()
 alloc_details = alloc_active[['เอกสารการจัดซื้อ', 'โรงงาน', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']] if not alloc_active.empty else pd.DataFrame()
