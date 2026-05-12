@@ -41,11 +41,9 @@
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(2px);}
         .modal-overlay.active { display: flex; }
         .modal-content { background: white; width: 95%; max-width: 1200px; border-radius: 12px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden;}
-        
         .modal-content-small { background: white; width: 95%; max-width: 600px; border-radius: 12px; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden;}
-
         .modal-header { background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; border-bottom: 4px solid #1abc9c; position: relative; z-index: 20;}
-        .modal-body { padding: 0; overflow-x: hidden; overflow-y: auto; }
+        .modal-body { padding: 0; overflow-y: auto; }
         .close-btn { background: #e74c3c; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; font-weight: bold; transition: 0.2s; font-size: 14px;}
         .close-btn:hover { background: #c0392b; }
 
@@ -62,6 +60,7 @@
         .btn-reset { padding: 6px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: 32px; width: 100%; font-size: 13px;}
         .btn-reset:hover { background: #c0392b; }
 
+        /* ปุ่ม Export Excel */
         .btn-export { background-color: #27ae60; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 5px;}
         .btn-export:hover { background-color: #219a52; box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
 
@@ -151,6 +150,7 @@
                         <span class="val-text" id="wbsCount">0</span> 
                         <span style="color:#7f8c8d; font-size:14px; font-weight:bold;">โครงการ</span>
                     </div>
+                    
                     <div id="branchBreakdown" style="display: flex; gap: 8px; flex-wrap: wrap; border-left: 2px solid #aeb6bf; padding-left: 15px; min-height: 24px;"></div>
                     <div id="teamBreakdown" style="display: none; gap: 8px; flex-wrap: wrap; border-left: 2px solid #f39c12; padding-left: 15px; min-height: 24px;"></div>
                     <div id="wbsBreakdown" style="display: flex; gap: 8px; flex-wrap: wrap; border-left: 2px solid #a3e4d7; padding-left: 15px; min-height: 24px;"></div>
@@ -283,8 +283,8 @@
                 <span id="costModalTitle">💸 รายละเอียดค่าใช้จ่าย</span>
                 <button class="close-btn" style="background:#e74c3c;" onclick="closeModal('costModal')">❌ ปิด</button>
             </div>
-            <div class="modal-body" style="padding: 15px; background: #fdfefe;">
-                <div id="costModalContent" style="font-size: 14px;"></div>
+            <div class="modal-body" style="padding: 20px; background: #fdfefe;">
+                <div id="costModalContent" style="font-size: 15px;"></div>
             </div>
         </div>
     </div>
@@ -483,25 +483,48 @@
         applySortAndRenderTable1();
     }
 
-    function showCostDetails(wbsCode, costJsonStr) {
+    // ฟังก์ชันคำนวณและแสดง Modal 3 แบบป้องกันการ Error 100%
+    function showCostDetails(wbsCode) {
         document.getElementById('costModalTitle').innerHTML = `💸 รายละเอียดค่าใช้จ่าย: <span style="color:#f1c40f;">${wbsCode}</span>`;
         
-        let c = { text: "-", pln: 0, act: 0, remain: 0, p_labor: 0, p_control: 0, p_transport: 0, p_misc: 0, labor: 0, control: 0, transport: 0, misc: 0 };
-        try {
-            if(costJsonStr && costJsonStr !== "NaN" && costJsonStr !== "-") {
-                c = JSON.parse(costJsonStr);
-            }
-        } catch(e) {}
+        let wbsInfo = currentWBSList.find(x => x.WBS === wbsCode);
+        
+        // กำหนดค่าเริ่มต้น รองรับทั้งคีย์เก่าและคีย์ใหม่
+        let c = { text: "-", pln: 0, act: 0, remain: 0, p_labor: 0, p_control: 0, p_transport: 0, p_misc: 0, a_labor: 0, a_control: 0, a_transport: 0, a_misc: 0 };
+        
+        if (wbsInfo && wbsInfo.CostData && wbsInfo.CostData !== "NaN" && wbsInfo.CostData !== "-") {
+            try {
+                let parsed = JSON.parse(wbsInfo.CostData);
+                // ดึงค่ารองรับทั้ง 2 เวอร์ชัน ป้องกันอาการกดไม่ติด
+                c.text = parsed.text || "-";
+                c.pln = parsed.pln || 0;
+                c.act = parsed.act || 0;
+                c.p_labor = parsed.p_labor || 0;
+                c.p_control = parsed.p_control || 0;
+                c.p_transport = parsed.p_transport || 0;
+                c.p_misc = parsed.p_misc || 0;
+                c.a_labor = parsed.a_labor || parsed.labor || 0;
+                c.a_control = parsed.a_control || parsed.control || 0;
+                c.a_transport = parsed.a_transport || parsed.transport || 0;
+                c.a_misc = parsed.a_misc || parsed.misc || 0;
+            } catch(e) {}
+        }
 
         let pln80 = c.pln * 0.80;
         let remain80 = pln80 - c.act;
         let remColor = remain80 < 0 ? 'color: #e74c3c;' : 'color: #27ae60;';
-        const fmt = (num) => num.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+        // ฟังก์ชันฟอร์แมตตัวเลขแบบกันพัง
+        const fmt = (num) => (Number(num) || 0).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 
         let html = `
             <div style="background: #f4ecf7; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; border: 1px solid #d2b4de;">
                 <div style="font-size: 14px; color: #8e44ad; font-weight: bold; margin-bottom: 5px;">ภาพรวมเบิกจ่าย</div>
                 <div style="font-size: 24px; font-weight: bold; color: #2c3e50;">${c.text}</div>
+                <div style="font-size: 14px; margin-top: 5px;">
+                    <span style="color:#8e44ad;">งบประมาณ (Pln 80%): <b>${fmt(pln80)}</b></span> | 
+                    <span style="color:#d35400;">เบิกจ่ายแล้ว (Act): <b>${fmt(c.act)}</b></span>
+                </div>
             </div>
             
             <table class="cost-compare-table" style="table-layout: fixed; width: 100%;">
@@ -516,22 +539,22 @@
                     <tr>
                         <td class="row-title">🛠️ ค่าแรง</td>
                         <td class="val-pln">${fmt(c.p_labor)}</td>
-                        <td class="val-act">${fmt(c.labor)}</td>
+                        <td class="val-act">${fmt(c.a_labor)}</td>
                     </tr>
                     <tr>
                         <td class="row-title">👷 ค่าควบคุมงาน</td>
                         <td class="val-pln">${fmt(c.p_control)}</td>
-                        <td class="val-act">${fmt(c.control)}</td>
+                        <td class="val-act">${fmt(c.a_control)}</td>
                     </tr>
                     <tr>
                         <td class="row-title">🚚 ค่าขนส่ง</td>
                         <td class="val-pln">${fmt(c.p_transport)}</td>
-                        <td class="val-act">${fmt(c.transport)}</td>
+                        <td class="val-act">${fmt(c.a_transport)}</td>
                     </tr>
                     <tr>
                         <td class="row-title">📦 ค่าเบ็ดเตล็ด</td>
                         <td class="val-pln">${fmt(c.p_misc)}</td>
-                        <td class="val-act">${fmt(c.misc)}</td>
+                        <td class="val-act">${fmt(c.a_misc)}</td>
                     </tr>
                     <tr class="row-total">
                         <td class="row-title" style="font-size:15px;">💰 ยอดรวม (Pln 100%)</td>
@@ -577,8 +600,8 @@
                         if(pctNum >= 80 && pctNum < 100) color = '#f39c12'; 
                         else if(pctNum >= 100) color = '#c0392b'; 
                         
-                        let safeJson = r.CostData.replace(/'/g, "&#39;");
-                        costHtml = `<div class="link-text" onclick='showCostDetails("${r.WBS}", \`${safeJson}\`)' style="text-align:center;">
+                        // ใช้ onclick แบบเรียกผ่าน WBS ตัวเดียว ปลอดภัย 100% ไม่มีทางรวน
+                        costHtml = `<div class="link-text" onclick="showCostDetails('${r.WBS}')" style="text-align:center;">
                                        <span style="color:${color}; font-size:14px;">${pct}</span> = <br>
                                        <span style="color:#2c3e50; font-weight:normal;">${amt}</span>
                                     </div>`;
