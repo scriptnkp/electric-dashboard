@@ -49,7 +49,10 @@ def read_sap_txt(filepath):
                             new_parts = parts[:idx] + [merged] + parts[idx + extra + 1:]
                             if len(new_parts) == len(headers): data.append(new_parts)
     if headers and data:
-        return pd.DataFrame(data, columns=headers)
+        df = pd.DataFrame(data, columns=headers)
+        # เพิ่มบรรทัดนี้: ลบคอลัมน์ที่ชื่อซ้ำกัน (เช่น คอลัมน์ว่าง) ป้องกัน Error
+        df = df.loc[:, ~df.columns.duplicated()]
+        return df
     return pd.DataFrame()
 
 def parse_sap_num(x):
