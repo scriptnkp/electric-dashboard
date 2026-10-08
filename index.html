@@ -2,14 +2,65 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>หน้ากราฟ (Dashboard)</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="data.js"></script>
+
+    <style>
+        .toolbar { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; background: #eaf2f8; padding: 12px 18px; border-radius: 8px; margin-bottom: 15px; }
+        .toolbar label { font-weight: bold; color: #34495e; font-size: 13px; display: block; margin-bottom: 4px; }
+        .toolbar select { min-width: 170px; font-size: 14px; padding: 6px; }
+        .tb-btn { padding: 8px 14px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; color: white; }
+        .tb-clear { background: #e74c3c; } .tb-clear:hover { background: #c0392b; }
+        .tb-print { background: #34495e; margin-left: auto; } .tb-print:hover { background: #2c3e50; }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; min-height: 8px; }
+        .chip { background: #fdebd0; color: #a04000; border: 1px solid #f5cba7; padding: 3px 10px; border-radius: 14px; font-size: 12px; font-weight: bold; }
+
+        .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 18px; }
+        .kpi { border-radius: 10px; padding: 14px 16px; background: #fff; border: 1px solid #e3e8ee; border-left: 6px solid #3498db; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .kpi .k-label { font-size: 12.5px; color: #7f8c8d; font-weight: bold; }
+        .kpi .k-value { font-size: 30px; font-weight: bold; color: #2c3e50; line-height: 1.2; margin-top: 4px; }
+        .kpi .k-sub { font-size: 12px; color: #7f8c8d; margin-top: 2px; }
+        .kpi.red { border-left-color: #e74c3c; } .kpi.red .k-value { color: #c0392b; }
+        .kpi.amber { border-left-color: #f39c12; } .kpi.amber .k-value { color: #d68910; }
+        .kpi.green { border-left-color: #27ae60; } .kpi.green .k-value { color: #1e8449; }
+        .kpi.purple { border-left-color: #8e44ad; } .kpi.purple .k-value { color: #7d3c98; }
+
+        .insight { background: #fffbe6; border: 1px solid #f7e08a; border-left: 6px solid #f1c40f; border-radius: 8px; padding: 12px 18px; margin-bottom: 18px; }
+        .insight h3 { margin: 0 0 6px 0; font-size: 16px; color: #7d6608; }
+        .insight ul { margin: 0; padding-left: 20px; line-height: 1.8; font-size: 14px; color: #34495e; }
+
+        .grid { display: grid; gap: 18px; margin-bottom: 18px; }
+        .g3 { grid-template-columns: 1fr 1.3fr 1fr; }
+        .g2 { grid-template-columns: 1fr 1fr; }
+        .g21 { grid-template-columns: 1.6fr 1fr; }
+        @media (max-width: 1100px) { .g3, .g2, .g21 { grid-template-columns: 1fr; } }
+        .card { border: 1px solid #e3e8ee; border-radius: 10px; padding: 14px 16px; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.04); min-width: 0; }
+        .card h3 { margin: 0 0 2px 0; font-size: 16px; color: #2c3e50; text-align: center; }
+        .card .hint { font-size: 11.5px; color: #95a5a6; text-align: center; margin-bottom: 8px; min-height: 14px; }
+        .chart-box { position: relative; height: 300px; }
+        .chart-box.tall { height: 470px; }
+
+        @media print {
+            @page { size: A4 landscape; margin: 10mm; }
+            body { background: white; }
+            .navbar, .toolbar, .chips { display: none !important; }
+            .container { box-shadow: none; margin: 0; max-width: none; padding: 0; }
+            .card, .kpi, .insight { break-inside: avoid; box-shadow: none; }
+            .g3 { grid-template-columns: 1fr 1.3fr 1fr; }
+            .g2 { grid-template-columns: 1fr 1fr; }
+            .g21 { grid-template-columns: 1.6fr 1fr; }
+            .print-title { display: block !important; }
+        }
+        .print-title { display: none; font-size: 20px; font-weight: bold; margin-bottom: 8px; color: #2c3e50; }
+    </style>
 </head>
 <body>
     <div class="navbar">
-        <a href="index.html" class="nav-btn btn-graph">📊 หน้ากราฟ</a>
+        <a href="index.html" class="nav-btn btn-graph" style="box-shadow: 0 0 0 2px white;">📊 หน้ากราฟ</a>
         <a href="demand.html" class="nav-btn btn-demand">📋 ตารางความต้องการ</a>
         <a href="concrete.html" class="nav-btn btn-concrete">🏗️ ผลิตภัณฑ์คอนกรีต</a>
         <a href="me2n.html" class="nav-btn btn-me2n">📦 วัสดุรอนำเข้า (ME2N)</a>
@@ -21,130 +72,401 @@
             🕒 อัปเดตล่าสุด: <span id="lastUpdatedText">กำลังอัปเดต...</span>
         </div>
     </div>
+
     <div class="container">
-        <div class="filter-section">
-            <div><label><b>🔍 ประเภท:</b></label> <select id="categoryFilter" onchange="applyFilters()"><option value="ALL">รวมทั้งหมด</option></select></div>
-            <div><label><b>⚖️ สถานะ:</b></label> <select id="balanceFilter" onchange="applyFilters()"><option value="ALL">ทั้งหมด</option><option value="SHORTAGE">🔴 ของขาด</option><option value="SURPLUS">🟢 ของเหลือ</option></select></div>
+        <div class="print-title">📊 สรุปภาพรวมวัสดุ-พัสดุ กฟอ. (ข้อมูล ณ <span id="printDate"></span>)</div>
+
+        <div class="toolbar">
+            <div><label>🔍 ประเภทวัสดุ</label><select id="categoryFilter" onchange="onFilterChange()"><option value="ALL">รวมทั้งหมด</option></select></div>
+            <div><label>📍 กฟฟ.</label><select id="branchFilter" onchange="onFilterChange()"><option value="ALL">ทุก กฟฟ.</option></select></div>
+            <button class="tb-btn tb-clear" onclick="clearAll()">🔄 ล้างตัวกรอง</button>
+            <button class="tb-btn tb-print" onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button>
         </div>
-        
-        <div style="display:flex; gap:20px; margin-bottom: 20px; flex-wrap: wrap;">
-            <div style="flex:1; min-width: 350px; border:1px solid #ddd; padding:15px; border-radius:8px; display: flex; flex-direction: column; align-items: center;">
-                <h3 style="text-align:center; margin-top:0; margin-bottom: 5px;">📌 จำนวนงานแยกตามงบ</h3>
-                <span style="font-size:12px; color:#7f8c8d;">(คลิกที่สีในกราฟเพื่อกรองดูเฉพาะงบ)</span>
-                <button id="resetPieBtn" class="reset-btn" onclick="currentSelectedGroup=null; applyFilters();">❌ ล้างการเลือกงบ</button>
-                <div style="height:300px; width:100%; margin-top: 10px;"><canvas id="pieChart"></canvas></div>
+        <div class="chips" id="chips"></div>
+
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <div class="insight">
+            <h3>💡 ประเด็นสำคัญ (สรุปอัตโนมัติตามตัวกรอง)</h3>
+            <ul id="insightList"></ul>
+        </div>
+
+        <div class="grid g3">
+            <div class="card">
+                <h3>📌 WBS ค้างจ่ายแยกตามงบ</h3>
+                <div class="hint">คลิกที่ชิ้นกราฟเพื่อกรองทั้งหน้า (คลิกซ้ำเพื่อยกเลิก)</div>
+                <div class="chart-box"><canvas id="pieChart"></canvas></div>
             </div>
-            
-            <div style="flex:2; min-width: 500px; border:1px solid #ddd; padding:15px; border-radius:8px;">
-                <h3 id="barTitle" style="text-align:center; margin-top:0;">📊 ความต้องการรวม vs สต๊อกคงคลัง</h3>
-                <div style="height:330px;"><canvas id="barChart"></canvas></div>
+            <div class="card">
+                <h3>📍 WBS ค้างจ่ายแยกตาม กฟฟ. และงบ</h3>
+                <div class="hint">คลิกที่แท่งเพื่อกรองเฉพาะ กฟฟ.</div>
+                <div class="chart-box"><canvas id="branchChart"></canvas></div>
+            </div>
+            <div class="card">
+                <h3>🎯 ความพร้อมของวัสดุ (นับตามรายการ)</h3>
+                <div class="hint">สต็อก D060 + จัดสรร (ME2N) + จัดซื้อ (PR/PO) เทียบกับความต้องการ</div>
+                <div class="chart-box"><canvas id="coverChart"></canvas></div>
             </div>
         </div>
-        
-        <div style="border:1px solid #ddd; padding:15px; border-radius:8px;">
-            <h3 id="balTitle" style="text-align:center; margin-top:0;">📉 ยอดขาด/เกิน (Balance)</h3>
-            <div style="height:350px;"><canvas id="balanceChart"></canvas></div>
+
+        <div class="grid g21">
+            <div class="card">
+                <h3>🚨 Top 15 วัสดุที่ขาด และกระทบ WBS มากที่สุด</h3>
+                <div class="hint">เรียงตามจำนวน WBS ที่ใช้วัสดุนั้น (ตัวเลขใน [ ]) | แท่งเต็ม 100% = ความต้องการ แบ่งสีเป็นส่วนที่มีแล้วและส่วนที่ยังขาด</div>
+                <div class="chart-box tall"><canvas id="topShortChart"></canvas></div>
+            </div>
+            <div class="card">
+                <h3>🧩 สัดส่วนที่จัดหาได้ แยกตามประเภทวัสดุ</h3>
+                <div class="hint">100% = ปริมาณความต้องการของประเภทนั้น</div>
+                <div class="chart-box tall"><canvas id="catChart"></canvas></div>
+            </div>
+        </div>
+
+        <div class="grid g2">
+            <div class="card">
+                <h3>👷 WBS ค้างจ่ายแยกตามผู้ควบคุมงาน (Top 10)</h3>
+                <div class="hint">เห็นภาระงานของแต่ละคน</div>
+                <div class="chart-box"><canvas id="supChart"></canvas></div>
+            </div>
+            <div class="card">
+                <h3>🏷️ WBS ค้างจ่ายแยกตามสถานะโครงการ</h3>
+                <div class="hint">สถานะระบบ SAP ของ WBS</div>
+                <div class="chart-box"><canvas id="statusChart"></canvas></div>
+            </div>
+        </div>
+
+        <div style="font-size:12px; color:#95a5a6; text-align:right;">
+            * นับเฉพาะ WBS ที่ยังค้างจ่ายพัสดุ (ปริมาณผลต่าง &gt; 0) ตัวเลขตรงกับหน้า "ตารางความต้องการ"
         </div>
     </div>
 
 <script>
-    let balanceChart = null, barChart = null, pieChartObj = null;
-    let currentSelectedGroup = null; // ตัวแปรเก็บว่าคลิกเลือกงบไหนอยู่
+    const BRANCH_ORDER = ['ธาตุพนม', 'นครพนม', 'นาแก', 'บ้านแพง'];
+    const GROUP_COLORS = {
+        'คพจ1': '#95a5a6', 'คพจ2': '#7f8c8d', 'คพพ': '#16a085', 'คฟม': '#8e44ad',
+        'ผู้ใช้ไฟ 68': '#85c1e9', 'ผู้ใช้ไฟ 69': '#2980b9',
+        'ลงทุน 67': '#f8c471', 'ลงทุน 68': '#e67e22', 'ลงทุน 69': '#d35400', 'อื่นๆ': '#bdc3c7'
+    };
+    const C = { stock: '#27ae60', alloc: '#8e44ad', po: '#3498db', short: '#e74c3c', demand: '#e67e22' };
+    const NO_SUP = 'ไม่ระบุผู้ควบคุม';
+
+    const state = { cat: 'ALL', branch: 'ALL', group: null };
+    const charts = {};
+    let wbsInfo = {}, matCat = {}, matDesc = {}, allocMap = {}, prpoMap = {}, stockOf = {}, baseRows = [];
+
+    const fmt = n => (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+    const pct = (a, b) => b > 0 ? (a / b * 100).toFixed(0) + '%' : '-';
+    const sortOrder = (arr, order) => arr.sort((a, b) => {
+        let ia = order.indexOf(a), ib = order.indexOf(b);
+        if (ia < 0) ia = 99; if (ib < 0) ib = 99;
+        return ia === ib ? String(a).localeCompare(String(b)) : ia - ib;
+    });
+
+    function getProjectGroup(wbs) {
+        const w = String(wbs).toUpperCase();
+        if (w.startsWith('C-68')) return 'ผู้ใช้ไฟ 68';
+        if (w.startsWith('C-69')) return 'ผู้ใช้ไฟ 69';
+        if (w.startsWith('I-67')) return 'ลงทุน 67';
+        if (w.startsWith('I-68')) return 'ลงทุน 68';
+        if (w.startsWith('I-69')) return 'ลงทุน 69';
+        if (w.startsWith('P-NHE03')) return 'คฟม';
+        if (w.startsWith('P-SEZ02')) return 'คพพ';
+        if (w.startsWith('P-TDD01')) return 'คพจ1';
+        if (w.startsWith('P-TDD02')) return 'คพจ2';
+        return 'อื่นๆ';
+    }
 
     function init() {
         document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
-        const uniqueCat = [...new Set(mainData.map(i => i.Category))].sort();
-        uniqueCat.forEach(c => document.getElementById('categoryFilter').appendChild(new Option(c, c)));
-        
-        pieChartObj = new Chart(document.getElementById('pieChart'), {
-            type: 'pie', 
-            data: { 
-                labels: pieRawData.map(i=>i.Project_Group), 
-                datasets: [{ 
-                    data: pieRawData.map(i=>i.WBS_Count), 
-                    backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40', '#8AC926', '#e84393', '#00b894'] 
-                }] 
+        document.getElementById('printDate').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : '';
+
+        if (typeof mainData === 'undefined' || typeof demandDetailsData === 'undefined' || typeof wbsSummaryData === 'undefined') {
+            document.getElementById('kpiGrid').innerHTML = '<div style="color:#e74c3c; font-weight:bold; padding:20px;">⚠️ เซิร์ฟเวอร์กำลังอัปเดตข้อมูล โปรดรอสักครู่ แล้วกดรีเฟรช (F5)</div>';
+            return;
+        }
+        Chart.defaults.font.family = "'Segoe UI', Tahoma, sans-serif";
+        Chart.defaults.font.size = 12;
+
+        wbsSummaryData.forEach(w => { wbsInfo[w.WBS] = w; });
+        mainData.forEach(m => { matCat[m['วัสดุ']] = m.Category; matDesc[m['วัสดุ']] = m.MatDesc; });
+        if (typeof me2nSummaryData !== 'undefined') me2nSummaryData.forEach(i => { allocMap[i['วัสดุ']] = (allocMap[i['วัสดุ']] || 0) + (parseFloat(i['ยังจะถูกส่งมอบ (ปริมาณ)']) || 0); });
+        if (typeof purchaseData !== 'undefined') purchaseData.forEach(i => { prpoMap[i['Mat']] = (prpoMap[i['Mat']] || 0) + (parseFloat(i['Qty']) || 0); });
+
+        demandDetailsData.forEach(d => { if (!(d['วัสดุ'] in stockOf)) stockOf[d['วัสดุ']] = d.Stock || 0; });
+        baseRows = demandDetailsData.filter(d => d.Qty > 0 && wbsInfo[d.WBS] && matCat[d['วัสดุ']]);
+
+        [...new Set(baseRows.map(d => matCat[d['วัสดุ']]))].sort().forEach(c => document.getElementById('categoryFilter').appendChild(new Option(c, c)));
+        sortOrder([...new Set(baseRows.map(d => wbsInfo[d.WBS].Branch))], BRANCH_ORDER).forEach(b => document.getElementById('branchFilter').appendChild(new Option(b, b)));
+
+        renderAll();
+    }
+
+    function onFilterChange() {
+        state.cat = document.getElementById('categoryFilter').value;
+        state.branch = document.getElementById('branchFilter').value;
+        renderAll();
+    }
+    function clearAll() {
+        state.cat = 'ALL'; state.branch = 'ALL'; state.group = null;
+        document.getElementById('categoryFilter').value = 'ALL';
+        document.getElementById('branchFilter').value = 'ALL';
+        renderAll();
+    }
+
+    // ดึงแถวความต้องการตามตัวกรอง (ignore = ตัวกรองที่ไม่ต้องใช้ เพื่อให้กราฟนั้นยังแสดงครบทุกตัวเลือก)
+    function rowsFor(ignore) {
+        return baseRows.filter(d => {
+            const w = wbsInfo[d.WBS];
+            if (ignore !== 'cat' && state.cat !== 'ALL' && matCat[d['วัสดุ']] !== state.cat) return false;
+            if (ignore !== 'branch' && state.branch !== 'ALL' && w.Branch !== state.branch) return false;
+            if (ignore !== 'group' && state.group && getProjectGroup(d.WBS) !== state.group) return false;
+            return true;
+        });
+    }
+
+    // วิเคราะห์ความพอเพียงของวัสดุแต่ละรายการ
+    function analyzeMaterials(rows) {
+        const dem = {}, wbsOf = {};
+        rows.forEach(d => {
+            dem[d['วัสดุ']] = (dem[d['วัสดุ']] || 0) + d.Qty;
+            (wbsOf[d['วัสดุ']] = wbsOf[d['วัสดุ']] || new Set()).add(d.WBS);
+        });
+        return Object.keys(dem).map(m => {
+            const demand = dem[m], stock = stockOf[m] || 0, alloc = allocMap[m] || 0, po = prpoMap[m] || 0;
+            const covStock = Math.min(demand, Math.max(stock, 0));
+            const covAlloc = Math.min(demand - covStock, alloc);
+            const covPo = Math.min(demand - covStock - covAlloc, po);
+            const short = Math.max(demand - covStock - covAlloc - covPo, 0);
+            let status = 'short';
+            if (stock >= demand) status = 'ok';
+            else if (short === 0) status = 'incoming';
+            return { mat: m, desc: matDesc[m] || '-', cat: matCat[m], demand, stock, alloc, po, covStock, covAlloc, covPo, short, status, nWbs: wbsOf[m].size };
+        });
+    }
+
+    function draw(id, cfg) {
+        if (charts[id]) charts[id].destroy();
+        charts[id] = new Chart(document.getElementById(id), cfg);
+    }
+
+    function renderAll() {
+        const rows = rowsFor(null);
+        const mats = analyzeMaterials(rows);
+        const shortSet = new Set(mats.filter(m => m.short > 0).map(m => m.mat));
+        const wbsSet = new Set(rows.map(d => d.WBS));
+        const wbsBlocked = new Set(rows.filter(d => shortSet.has(d['วัสดุ'])).map(d => d.WBS));
+
+        renderChips();
+        renderKpis(mats, wbsSet, wbsBlocked);
+        renderInsights(rows, mats, wbsSet, wbsBlocked);
+        renderPie();
+        renderBranch();
+        renderCover(mats);
+        renderTopShort(mats);
+        renderCategory(mats);
+        renderSupervisor(rows);
+        renderStatus(rows);
+    }
+
+    function renderChips() {
+        let h = '';
+        if (state.cat !== 'ALL') h += `<span class="chip">ประเภท: ${state.cat}</span>`;
+        if (state.branch !== 'ALL') h += `<span class="chip">กฟฟ.: ${state.branch}</span>`;
+        if (state.group) h += `<span class="chip">งบ: ${state.group}</span>`;
+        document.getElementById('chips').innerHTML = h;
+    }
+
+    function renderKpis(mats, wbsSet, wbsBlocked) {
+        const nShort = mats.filter(m => m.status === 'short').length;
+        const nIncoming = mats.filter(m => m.status === 'incoming').length;
+        const nOk = mats.filter(m => m.status === 'ok').length;
+        const totalShort = mats.reduce((s, m) => s + m.short, 0);
+        const k = [
+            { c: '', l: '📝 WBS ค้างจ่ายพัสดุ', v: fmt(wbsSet.size), s: 'โครงการ' },
+            { c: 'red', l: '⛔ WBS ที่ใช้วัสดุที่ขาด', v: fmt(wbsBlocked.size), s: `${pct(wbsBlocked.size, wbsSet.size)} ของ WBS ค้างจ่าย (ใช้วัสดุที่ขาดอย่างน้อย 1 รายการ)` },
+            { c: 'purple', l: '📦 รายการวัสดุที่ต้องใช้', v: fmt(mats.length), s: 'รายการ (รหัสวัสดุ)' },
+            { c: 'green', l: '✅ พอจากสต็อก', v: fmt(nOk), s: `${pct(nOk, mats.length)} ของรายการ` },
+            { c: 'amber', l: '⏳ ขาดแต่มีของรอเข้า', v: fmt(nIncoming), s: 'จัดสรร/จัดซื้อครอบคลุมแล้ว' },
+            { c: 'red', l: '🚨 ขาดจริง (ยังไม่มีของรอ)', v: fmt(nShort), s: `${pct(nShort, mats.length)} ของรายการ | ขาดรวม ${fmt(totalShort)} หน่วย` }
+        ];
+        document.getElementById('kpiGrid').innerHTML = k.map(i => `
+            <div class="kpi ${i.c}"><div class="k-label">${i.l}</div><div class="k-value">${i.v}</div><div class="k-sub">${i.s}</div></div>`).join('');
+    }
+
+    function renderInsights(rows, mats, wbsSet, wbsBlocked) {
+        const li = [];
+        if (!rows.length) { document.getElementById('insightList').innerHTML = '<li>ไม่มีข้อมูลตามเงื่อนไขที่เลือก</li>'; return; }
+        const short = mats.filter(m => m.status === 'short').sort((a, b) => b.short - a.short);
+        const incoming = mats.filter(m => m.status === 'incoming').length;
+        li.push(`ขาดจริง <b>${short.length}</b> จาก ${mats.length} รายการ (${pct(short.length, mats.length)}) โดยมี <b>${wbsBlocked.size}</b> จาก ${wbsSet.size} WBS (${pct(wbsBlocked.size, wbsSet.size)}) ที่ใช้วัสดุกลุ่มนี้อย่างน้อย 1 รายการ`);
+        if (incoming) li.push(`มี <b>${incoming}</b> รายการที่สต็อกไม่พอ แต่ยอดจัดสรร/จัดซื้อที่รออยู่ครอบคลุมแล้ว → ควรติดตามวันส่งมอบ`);
+        const byWbs = short.slice().sort((a, b) => b.nWbs - a.nWbs)[0];
+        if (byWbs) li.push(`วัสดุที่ขาดและกระทบหลาย WBS ที่สุด: <b>${byWbs.desc}</b> (${byWbs.mat}) ใช้ใน ${byWbs.nWbs} WBS ขาด ${fmt(byWbs.short)} จาก ${fmt(byWbs.demand)} หน่วย`);
+
+        const g = {}; rows.forEach(d => { const k = getProjectGroup(d.WBS); (g[k] = g[k] || new Set()).add(d.WBS); });
+        const gTop = Object.entries(g).sort((a, b) => b[1].size - a[1].size)[0];
+        if (gTop) li.push(`งบที่มี WBS ค้างมากที่สุด: <b>${gTop[0]}</b> ${gTop[1].size} โครงการ (${pct(gTop[1].size, wbsSet.size)})`);
+
+        const b = {}; rows.forEach(d => { const k = wbsInfo[d.WBS].Branch; (b[k] = b[k] || new Set()).add(d.WBS); });
+        const bTop = Object.entries(b).sort((a, b2) => b2[1].size - a[1].size)[0];
+        if (bTop && state.branch === 'ALL') li.push(`กฟฟ. ที่มี WBS ค้างมากที่สุด: <b>${bTop[0]}</b> ${bTop[1].size} โครงการ (${pct(bTop[1].size, wbsSet.size)})`);
+
+        const noSup = [...wbsSet].filter(w => !wbsInfo[w].Supervisor || wbsInfo[w].Supervisor === '-').length;
+        if (noSup) li.push(`WBS ที่ยังไม่ระบุผู้ควบคุมงาน: <b>${noSup}</b> โครงการ (${pct(noSup, wbsSet.size)}) → ควรกำหนดผู้รับผิดชอบ`);
+        document.getElementById('insightList').innerHTML = li.map(t => `<li>${t}</li>`).join('');
+    }
+
+    function renderPie() {
+        const rows = rowsFor('group');
+        const g = {}; rows.forEach(d => { const k = getProjectGroup(d.WBS); (g[k] = g[k] || new Set()).add(d.WBS); });
+        const labels = Object.keys(g).sort();
+        draw('pieChart', {
+            type: 'doughnut',
+            data: {
+                labels: labels.map(l => `${l} (${g[l].size})`),
+                datasets: [{ data: labels.map(l => g[l].size), backgroundColor: labels.map(l => GROUP_COLORS[l] || '#bdc3c7'), offset: labels.map(l => l === state.group ? 22 : 0), borderWidth: 2, borderColor: '#fff' }]
             },
-            options: { 
+            options: {
+                maintainAspectRatio: false, cutout: '48%',
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } }, tooltip: { callbacks: { label: c => ` ${labels[c.dataIndex]}: ${c.raw} WBS (${pct(c.raw, labels.reduce((s, l) => s + g[l].size, 0))})` } } },
+                onClick: (e, els) => {
+                    const lab = els.length ? labels[els[0].index] : null;
+                    state.group = (lab === null || lab === state.group) ? null : lab;
+                    renderAll();
+                }
+            }
+        });
+    }
+
+    function renderBranch() {
+        const rows = rowsFor('branch');
+        const bg = {}; // branch -> group -> Set(wbs)
+        rows.forEach(d => {
+            const b = wbsInfo[d.WBS].Branch, g = getProjectGroup(d.WBS);
+            bg[b] = bg[b] || {}; (bg[b][g] = bg[b][g] || new Set()).add(d.WBS);
+        });
+        const branches = sortOrder(Object.keys(bg), BRANCH_ORDER);
+        const groups = Object.keys(GROUP_COLORS).filter(g => branches.some(b => bg[b][g]));
+        draw('branchChart', {
+            type: 'bar',
+            data: {
+                labels: branches,
+                datasets: groups.map(g => ({ label: g, data: branches.map(b => bg[b][g] ? bg[b][g].size : 0), backgroundColor: GROUP_COLORS[g], borderWidth: branches.map(b => b === state.branch ? 2 : 0), borderColor: '#2c3e50' }))
+            },
+            options: {
                 maintainAspectRatio: false,
-                // เพิ่มคำสั่งดักจับการคลิกที่กราฟวงกลม
-                onClick: (event, elements) => {
-                    if (elements.length > 0) {
-                        const index = elements[0].index;
-                        const label = pieChartObj.data.labels[index];
-                        // ถ้าคลิกอันเดิมซ้ำ ให้ยกเลิกการเลือก
-                        if (currentSelectedGroup === label) {
-                            currentSelectedGroup = null;
-                        } else {
-                            currentSelectedGroup = label;
+                scales: { x: { stacked: true }, y: { stacked: true, title: { display: true, text: 'จำนวน WBS' } } },
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+                onClick: (e, els) => {
+                    if (!els.length) return;
+                    const b = branches[els[0].index];
+                    state.branch = (state.branch === b) ? 'ALL' : b;
+                    document.getElementById('branchFilter').value = state.branch;
+                    renderAll();
+                }
+            }
+        });
+    }
+
+    function renderCover(mats) {
+        const ok = mats.filter(m => m.status === 'ok').length;
+        const inc = mats.filter(m => m.status === 'incoming').length;
+        const sh = mats.filter(m => m.status === 'short').length;
+        draw('coverChart', {
+            type: 'doughnut',
+            data: {
+                labels: [`พอจากสต็อก (${ok})`, `รอของเข้าครอบคลุม (${inc})`, `ขาดจริง (${sh})`],
+                datasets: [{ data: [ok, inc, sh], backgroundColor: [C.stock, '#f39c12', C.short], borderWidth: 2, borderColor: '#fff' }]
+            },
+            options: { maintainAspectRatio: false, cutout: '48%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } }, tooltip: { callbacks: { label: c => ` ${c.raw} รายการ (${pct(c.raw, mats.length)})` } } } }
+        });
+    }
+
+    function renderTopShort(mats) {
+        // จัดอันดับตามจำนวน WBS ที่ใช้วัสดุนั้น (ไม่เทียบปริมาณข้ามหน่วย) แล้วแสดงเป็น % ของความต้องการ
+        const top = mats.filter(m => m.short > 0).sort((a, b) => b.nWbs - a.nWbs || b.short / b.demand - a.short / a.demand).slice(0, 15);
+        const lab = m => { const d = m.desc.length > 30 ? m.desc.slice(0, 29) + '…' : m.desc; return `${d} [${m.nWbs} WBS]`; };
+        const p = k => top.map(m => +(m[k] / m.demand * 100).toFixed(1));
+        draw('topShortChart', {
+            type: 'bar',
+            data: {
+                labels: top.map(lab),
+                datasets: [
+                    { label: 'สต็อก D060', data: p('covStock'), backgroundColor: C.stock },
+                    { label: 'จัดสรร (รอนำเข้า)', data: p('covAlloc'), backgroundColor: C.alloc },
+                    { label: 'จัดซื้อ (รอรับของ)', data: p('covPo'), backgroundColor: C.po },
+                    { label: 'ยังขาด', data: p('short'), backgroundColor: C.short }
+                ]
+            },
+            options: {
+                indexAxis: 'y', maintainAspectRatio: false,
+                scales: { x: { stacked: true, max: 100, title: { display: true, text: '% ของความต้องการรายการนั้น' } }, y: { stacked: true, ticks: { font: { size: 11 } } } },
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12 } },
+                    tooltip: {
+                        callbacks: {
+                            title: ctx => { const m = top[ctx[0].dataIndex]; return `${m.mat} : ${m.desc}`; },
+                            label: c => ` ${c.dataset.label}: ${c.raw}%`,
+                            afterBody: ctx => { const m = top[ctx[0].dataIndex]; return [`ใช้ใน ${m.nWbs} WBS | ต้องการ ${fmt(m.demand)}`, `สต็อก ${fmt(m.stock)} | จัดสรร ${fmt(m.alloc)} | จัดซื้อ ${fmt(m.po)}`, `ยังขาด ${fmt(m.short)}`]; }
                         }
-                        applyFilters();
-                    } else {
-                        // ถ้าคลิกพื้นที่ว่างในกราฟ ให้ยกเลิกการเลือก
-                        currentSelectedGroup = null;
-                        applyFilters();
                     }
                 }
             }
-        }); 
-        
-        applyFilters();
+        });
     }
 
-    function applyFilters() {
-        const cat = document.getElementById('categoryFilter').value;
-        const bal = document.getElementById('balanceFilter').value;
-        let fd = mainData;
-        
-        // 1. กรองประเภทและสถานะหลัก
-        if(cat !== 'ALL') fd = fd.filter(i => i.Category === cat);
-
-        // 2. คำนวณ Demand และ Balance ใหม่ตาม "งบ" ที่ถูกคลิก
-        let chartData = fd.map(i => {
-            let demand = currentSelectedGroup ? (i[currentSelectedGroup] || 0) : i.Total_Demand;
-            let balance = i.Stock - demand;
-            return { ...i, Chart_Demand: demand, Chart_Balance: balance };
+    function renderCategory(mats) {
+        const cat = {};
+        mats.forEach(m => {
+            const c = cat[m.cat] = cat[m.cat] || { demand: 0, covStock: 0, covAlloc: 0, covPo: 0, short: 0 };
+            c.demand += m.demand; c.covStock += m.covStock; c.covAlloc += m.covAlloc; c.covPo += m.covPo; c.short += m.short;
         });
-
-        // 3. ถ้ามีการคลิกเลือกงบ ให้ซ่อนอุปกรณ์ที่ไม่ได้ใช้อยู่ในงบนั้น (ยอด = 0)
-        if (currentSelectedGroup) {
-            chartData = chartData.filter(i => i.Chart_Demand > 0);
-            document.getElementById('resetPieBtn').style.display = 'inline-block';
-        } else {
-            document.getElementById('resetPieBtn').style.display = 'none';
-        }
-
-        // 4. กรองยอดขาดเกิน (หลังจากคำนวณยอดของงบนั้นๆ แล้ว)
-        if(bal === 'SHORTAGE') chartData = chartData.filter(i => i.Chart_Balance < 0);
-        else if(bal === 'SURPLUS') chartData = chartData.filter(i => i.Chart_Balance >= 0);
-
-        // เปลี่ยนชื่อหัวข้อกราฟให้ตรงกับที่เลือก
-        document.getElementById('barTitle').innerHTML = currentSelectedGroup ? `📊 ความต้องการ (<span style="color:#3498db">งบ: ${currentSelectedGroup}</span>) vs สต๊อกคงคลัง` : `📊 ความต้องการรวม vs สต๊อกคงคลัง`;
-        document.getElementById('balTitle').innerHTML = currentSelectedGroup ? `📉 ยอดขาด/เกิน (<span style="color:#3498db">งบ: ${currentSelectedGroup}</span>)` : `📉 ยอดขาด/เกิน (Balance รวม)`;
-
-        // วาดกราฟแท่งที่ 1 (Demand vs Stock)
-        if (barChart) barChart.destroy();
-        barChart = new Chart(document.getElementById('barChart'), { 
-            type: 'bar', 
-            data: { 
-                labels: chartData.map(i=>i['วัสดุ']), 
-                datasets: [ 
-                    { label: currentSelectedGroup ? `ต้องการ (${currentSelectedGroup})` : 'รวมความต้องการ', data: chartData.map(i=>i.Chart_Demand), backgroundColor: '#FF6384' }, 
-                    { label: 'สต๊อกคงคลัง D060', data: chartData.map(i=>i.Stock), backgroundColor: '#36A2EB' } 
-                ] 
-            }, 
-            options: { maintainAspectRatio: false, plugins: { tooltip: { callbacks: { beforeTitle: ctx => chartData[ctx[0].dataIndex]['คำอธิบายวัสดุ'] } } } } 
+        const names = Object.keys(cat).sort((a, b) => cat[b].demand - cat[a].demand);
+        const p = (k) => names.map(n => cat[n].demand ? +(cat[n][k] / cat[n].demand * 100).toFixed(1) : 0);
+        draw('catChart', {
+            type: 'bar',
+            data: {
+                labels: names,
+                datasets: [
+                    { label: 'สต็อก', data: p('covStock'), backgroundColor: C.stock },
+                    { label: 'จัดสรร', data: p('covAlloc'), backgroundColor: C.alloc },
+                    { label: 'จัดซื้อ', data: p('covPo'), backgroundColor: C.po },
+                    { label: 'ยังขาด', data: p('short'), backgroundColor: C.short }
+                ]
+            },
+            options: {
+                indexAxis: 'y', maintainAspectRatio: false,
+                scales: { x: { stacked: true, max: 100, title: { display: true, text: '% ของความต้องการ' } }, y: { stacked: true } },
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12 } },
+                    tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.raw}%`, afterBody: ctx => `ต้องการรวม ${fmt(cat[names[ctx[0].dataIndex]].demand)} หน่วย` } }
+                }
+            }
         });
+    }
 
-        // วาดกราฟแท่งที่ 2 (Balance)
-        if (balanceChart) balanceChart.destroy();
-        balanceChart = new Chart(document.getElementById('balanceChart'), { 
-            type: 'bar', 
-            data: { 
-                labels: chartData.map(i=>i['วัสดุ']), 
-                datasets: [{ label: 'ยอดขาด/เกิน', data: chartData.map(i=>i.Chart_Balance), backgroundColor: chartData.map(i=>i.Chart_Balance>=0?'#28a745':'#dc3545') }] 
-            }, 
-            options: { maintainAspectRatio: false, plugins: { tooltip: { callbacks: { beforeTitle: ctx => chartData[ctx[0].dataIndex]['คำอธิบายวัสดุ'] } } } } 
+    function renderSupervisor(rows) {
+        const s = {};
+        rows.forEach(d => {
+            let k = wbsInfo[d.WBS].Supervisor; if (!k || k === '-') k = NO_SUP;
+            (s[k] = s[k] || new Set()).add(d.WBS);
+        });
+        const top = Object.entries(s).sort((a, b) => b[1].size - a[1].size).slice(0, 10);
+        draw('supChart', {
+            type: 'bar',
+            data: { labels: top.map(t => t[0]), datasets: [{ label: 'จำนวน WBS', data: top.map(t => t[1].size), backgroundColor: top.map(t => t[0] === NO_SUP ? '#bdc3c7' : '#3498db') }] },
+            options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: 'จำนวน WBS' } } } }
+        });
+    }
+
+    function renderStatus(rows) {
+        const s = {};
+        rows.forEach(d => { const k = wbsInfo[d.WBS].Status || '-'; (s[k] = s[k] || new Set()).add(d.WBS); });
+        const top = Object.entries(s).sort((a, b) => b[1].size - a[1].size).slice(0, 10);
+        draw('statusChart', {
+            type: 'bar',
+            data: { labels: top.map(t => t[0] === '-' ? 'ไม่มีสถานะ' : t[0]), datasets: [{ label: 'จำนวน WBS', data: top.map(t => t[1].size), backgroundColor: '#16a085' }] },
+            options: { maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: 'จำนวน WBS' } } } }
         });
     }
 
