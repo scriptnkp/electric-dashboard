@@ -77,3 +77,4 @@ tfoot th { background-color: #34495e; color: #f1c40f; text-align: right; font-si
 .modal-body { padding: 20px; overflow-y: auto; }
 .modal-table th { background-color: #34495e; position: sticky; top: 0; }
 .modal-filter-input { width: 100%; padding: 5px; margin-top: 5px; }
+.btn-concrete { background-color: #e67e22; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3); }
