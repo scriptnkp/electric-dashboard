@@ -3,8 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>รายการจัดซื้อ</title>
+    <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
     <script src="data.js"></script>
+    <style>
+        .sec-head { display: flex; justify-content: space-between; align-items: center; margin: 20px 0 8px 0; flex-wrap: wrap; gap: 10px; }
+        .sec-head h2 { margin: 0; color: #2c3e50; font-size: 18px; }
+        .btn-clear-mat { padding: 5px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-clear-mat:hover { background: #c0392b; }
+        .sel-chip { background: #d5f5e3; color: #1e8449; border: 1px solid #a9dfbf; padding: 3px 10px; border-radius: 14px; font-size: 12px; font-weight: bold; display: none; }
+        #sumBody tr { cursor: pointer; }
+        #sumBody tr:hover { background-color: #e8f4f8; }
+        #sumBody tr.selected { background-color: #d5f5e3; }
+        #sumFoot td { background: #f4f6f7; font-weight: bold; border-top: 2px solid #2c3e50; }
+        .tag-pr { background: #fdebd0; color: #a04000; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }
+        .tag-po { background: #d6eaf8; color: #1b4f72; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }
+    </style>
 </head>
 <body>
     <div class="navbar">
@@ -25,17 +39,17 @@
         <h2 style="margin-top: 0; margin-bottom: 20px; color: #2c3e50; display: flex; align-items: center; gap: 10px;">
             🛒 รายการจัดซื้อ (รอรับของ)
         </h2>
-        
+
         <div class="filter-group">
             <div>
                 <label style="font-weight:bold; color:#34495e;">🔍 กรอง WBS: </label>
-                <select id="wbsFilter" onchange="renderTable()">
+                <select id="wbsFilter" onchange="selectedMat=null; renderTable()">
                     <option value="ALL">✅ รวมทั้งหมดทุก WBS</option>
                 </select>
             </div>
             <div>
                 <label style="font-weight:bold; color:#34495e;">📄 เลขเอกสาร: </label>
-                <input type="text" id="docFilter" onkeyup="renderTable()" placeholder="พิมพ์เลข PR หรือ PO...">
+                <input type="text" id="docFilter" onkeyup="selectedMat=null; renderTable()" placeholder="พิมพ์เลข PR หรือ PO...">
             </div>
         </div>
 
@@ -56,6 +70,37 @@
             </div>
         </div>
 
+        <!-- ตารางที่ 1 : สรุปรวมรายการที่ซื้อ (แยกตามวัสดุ) -->
+        <div class="sec-head">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <h2>1. สรุปรวมรายการที่ซื้อ (คลิกรหัสวัสดุเพื่อกรองตารางที่ 2)</h2>
+                <span class="sel-chip" id="selChip"></span>
+            </div>
+            <button class="btn-clear-mat" onclick="selectedMat=null; renderTable()">ล้างการเลือกวัสดุ</button>
+        </div>
+        <div class="table-wrapper" style="max-height: 320px;">
+            <table>
+                <thead style="background-color: #2c3e50;">
+                    <tr>
+                        <th style="color:white; min-width:130px;">รหัสวัสดุ (คลิกเพื่อกรอง)</th>
+                        <th style="color:white; min-width:280px;">ชื่ออุปกรณ์</th>
+                        <th style="color:white; text-align:right;">จำนวน PR</th>
+                        <th style="color:white; text-align:right;">จำนวน PO</th>
+                        <th style="color:white; text-align:right;">ยอดรวม</th>
+                        <th style="color:white; text-align:center;">จำนวนเอกสาร</th>
+                        <th style="color:white; text-align:right;">มูลค่า (฿)</th>
+                        <th style="color:white; text-align:center;">เลยกำหนด</th>
+                    </tr>
+                </thead>
+                <tbody id="sumBody"></tbody>
+                <tfoot id="sumFoot"></tfoot>
+            </table>
+        </div>
+
+        <!-- ตารางที่ 2 : รายละเอียดเอกสาร -->
+        <div class="sec-head">
+            <h2>2. รายละเอียดเอกสารการจัดซื้อ (PR / PO)</h2>
+        </div>
         <div class="table-wrapper">
             <table>
                 <thead>
@@ -76,11 +121,17 @@
     </div>
 
 <script>
+    let selectedMat = null; // วัสดุที่คลิกเลือกจากตารางที่ 1
+
+    const fmtQty = n => (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    const fmtMoney = n => (Number(n) || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     function init() {
         if (typeof lastUpdated !== 'undefined') document.getElementById('lastUpdatedText').innerText = lastUpdated;
-        
+
         if (typeof purchaseData === 'undefined' || purchaseData.length === 0) {
             document.getElementById('tableBody').innerHTML = '<tr><td colspan="8" style="text-align:center; color:red; padding: 30px;">ไม่พบข้อมูลรายการจัดซื้อ หรือกำลังรอประมวลผล...</td></tr>';
+            document.getElementById('sumBody').innerHTML = '<tr><td colspan="8" style="text-align:center; color:red; padding: 30px;">ไม่พบข้อมูลรายการจัดซื้อ หรือกำลังรอประมวลผล...</td></tr>';
             return;
         }
 
@@ -94,10 +145,10 @@
     function copyDocNum(text, element) {
         navigator.clipboard.writeText(text).then(() => {
             const originalIcon = element.innerText;
-            element.innerText = '✅'; 
+            element.innerText = '✅';
             element.style.opacity = '1';
             element.style.color = '#27ae60';
-            
+
             setTimeout(() => {
                 element.innerText = originalIcon;
                 element.style.opacity = '0.4';
@@ -108,13 +159,64 @@
         });
     }
 
+    function selectMat(mat) {
+        selectedMat = (selectedMat === mat) ? null : mat; // คลิกซ้ำเพื่อยกเลิก
+        renderTable();
+    }
+
     function renderTable() {
         const selectedWBS = document.getElementById('wbsFilter').value;
         const searchDoc = document.getElementById('docFilter').value.trim().toLowerCase();
-        
-        let fd = purchaseData;
-        if(selectedWBS !== 'ALL') fd = fd.filter(r => r.WBS === selectedWBS);
-        if(searchDoc !== '') fd = fd.filter(r => String(r.DocNum).toLowerCase().includes(searchDoc));
+
+        // กรองตาม WBS / เลขเอกสาร (ใช้กับทั้งตารางที่ 1 และ 2)
+        let base = purchaseData;
+        if (selectedWBS !== 'ALL') base = base.filter(r => r.WBS === selectedWBS);
+        if (searchDoc !== '') base = base.filter(r => String(r.DocNum).toLowerCase().includes(searchDoc));
+
+        // ---------- ตารางที่ 1 : สรุปตามวัสดุ ----------
+        const sum = {};
+        base.forEach(r => {
+            const s = sum[r.Mat] = sum[r.Mat] || { mat: r.Mat, desc: r.Desc, pr: 0, po: 0, docs: new Set(), amount: 0, overdue: new Set() };
+            if (r.DocType === 'PR') s.pr += r.Qty; else if (r.DocType === 'PO') s.po += r.Qty;
+            s.docs.add(r.DocNum);
+            s.amount += r.Amount || 0;
+            if (typeof r.OverdueDays === 'number' && r.OverdueDays > 0) s.overdue.add(r.DocNum);
+        });
+
+        if (selectedMat && !sum[selectedMat]) selectedMat = null; // วัสดุที่เลือกไม่อยู่ในผลกรองแล้ว
+
+        let hSum = '';
+        let tDocs = new Set(), tAmount = 0, tOver = new Set();
+        Object.values(sum).sort((a, b) => String(a.mat).localeCompare(String(b.mat))).forEach(s => {
+            s.docs.forEach(d => tDocs.add(d)); s.overdue.forEach(d => tOver.add(d));
+            tAmount += s.amount;
+            hSum += `<tr class="${selectedMat === s.mat ? 'selected' : ''}" onclick="selectMat('${s.mat}')">
+                <td class="wbs-link"><b>${s.mat}</b></td>
+                <td>${s.desc}</td>
+                <td class="num-col">${s.pr ? `<span class="tag-pr">PR</span> <b>${fmtQty(s.pr)}</b>` : '-'}</td>
+                <td class="num-col">${s.po ? `<span class="tag-po">PO</span> <b>${fmtQty(s.po)}</b>` : '-'}</td>
+                <td class="num-col" style="color:#27ae60;"><b>${fmtQty(s.pr + s.po)}</b></td>
+                <td style="text-align:center;">${s.docs.size}</td>
+                <td class="num-col" style="color:#c0392b;"><b>${fmtMoney(s.amount)}</b></td>
+                <td style="text-align:center;">${s.overdue.size ? `<span class="overdue">${s.overdue.size} เอกสาร</span>` : '-'}</td>
+            </tr>`;
+        });
+        document.getElementById('sumBody').innerHTML = hSum || '<tr><td colspan="8" style="text-align:center; padding: 20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
+        document.getElementById('sumFoot').innerHTML = hSum ? `<tr>
+            <td colspan="2" style="text-align:right;">รวม ${Object.keys(sum).length} รายการวัสดุ</td>
+            <td></td><td></td><td></td>
+            <td style="text-align:center;">${tDocs.size}</td>
+            <td class="num-col" style="color:#c0392b;">${fmtMoney(tAmount)}</td>
+            <td style="text-align:center;">${tOver.size ? tOver.size + ' เอกสาร' : '-'}</td>
+        </tr>` : '';
+
+        const chip = document.getElementById('selChip');
+        if (selectedMat) { chip.style.display = 'inline-block'; chip.innerText = '🔎 กำลังกรองวัสดุ: ' + selectedMat; }
+        else chip.style.display = 'none';
+
+        // ---------- ตารางที่ 2 : รายละเอียด ----------
+        let fd = base;
+        if (selectedMat) fd = fd.filter(r => r.Mat === selectedMat);
 
         let h = '';
         let uniquePRs = new Set();
@@ -123,8 +225,8 @@
         let sumPOAmount = 0;
 
         fd.forEach(r => {
-            if(r.DocType === 'PR') { uniquePRs.add(r.DocNum); sumPRAmount += r.Amount; } 
-            else if(r.DocType === 'PO') { uniquePOs.add(r.DocNum); sumPOAmount += r.Amount; }
+            if (r.DocType === 'PR') { uniquePRs.add(r.DocNum); sumPRAmount += r.Amount; }
+            else if (r.DocType === 'PO') { uniquePOs.add(r.DocNum); sumPOAmount += r.Amount; }
 
             let overdueText = r.OverdueDays;
             if (typeof overdueText === 'number' && overdueText > 0) {
@@ -138,7 +240,7 @@
             h += `<tr>
                 <td><b>${r.Company}</b></td>
                 <td style="text-align:center; font-weight:bold; color:#2c3e50;" title="ประเภท: ${r.DocType}">
-                    ${r.DocNum} 
+                    ${r.DocNum}
                     <span class="copy-btn" onclick="copyDocNum('${r.DocNum}', this)" title="คัดลอกเลขเอกสาร">📋</span>
                 </td>
                 <td style="text-align:center; color:#555;">${r.Mat}</td>
@@ -151,14 +253,14 @@
         });
 
         document.getElementById('tableBody').innerHTML = h || '<tr><td colspan="8" style="text-align:center; padding: 20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
-        
+
         document.getElementById('prCount').innerText = uniquePRs.size;
-        document.getElementById('prAmount').innerText = sumPRAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        
+        document.getElementById('prAmount').innerText = fmtMoney(sumPRAmount);
+
         document.getElementById('poCount').innerText = uniquePOs.size;
-        document.getElementById('poAmount').innerText = sumPOAmount.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
-        
-        document.getElementById('totalAmount').innerText = (sumPRAmount + sumPOAmount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        document.getElementById('poAmount').innerText = fmtMoney(sumPOAmount);
+
+        document.getElementById('totalAmount').innerText = fmtMoney(sumPRAmount + sumPOAmount);
     }
 
     window.onload = init;
