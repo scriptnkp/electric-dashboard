@@ -136,7 +136,7 @@
         </div>
 
         <div style="font-size:12px; color:#95a5a6; text-align:right;">
-            * นับเฉพาะ WBS ที่ยังค้างจ่ายพัสดุ (ปริมาณผลต่าง &gt; 0) ตัวเลขตรงกับหน้า "ตารางความต้องการ"
+            * นับเฉพาะ WBS ที่ยังค้างจ่ายพัสดุ (ปริมาณผลต่าง &gt; 0) และไม่รวมวัสดุรหัสขึ้นต้นด้วย 9 — จำนวนรายการวัสดุจึงอาจน้อยกว่าหน้า "ตารางความต้องการ"
         </div>
     </div>
 
@@ -193,7 +193,8 @@
         if (typeof purchaseData !== 'undefined') purchaseData.forEach(i => { prpoMap[i['Mat']] = (prpoMap[i['Mat']] || 0) + (parseFloat(i['Qty']) || 0); });
 
         demandDetailsData.forEach(d => { if (!(d['วัสดุ'] in stockOf)) stockOf[d['วัสดุ']] = d.Stock || 0; });
-        baseRows = demandDetailsData.filter(d => d.Qty > 0 && wbsInfo[d.WBS] && matCat[d['วัสดุ']]);
+        // ไม่นำวัสดุรหัสขึ้นต้นด้วย 9 มาแสดง
+        baseRows = demandDetailsData.filter(d => d.Qty > 0 && wbsInfo[d.WBS] && matCat[d['วัสดุ']] && !String(d['วัสดุ']).trim().startsWith('9'));
 
         [...new Set(baseRows.map(d => matCat[d['วัสดุ']]))].sort().forEach(c => document.getElementById('categoryFilter').appendChild(new Option(c, c)));
         sortOrder([...new Set(baseRows.map(d => wbsInfo[d.WBS].Branch))], BRANCH_ORDER).forEach(b => document.getElementById('branchFilter').appendChild(new Option(b, b)));

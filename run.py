@@ -390,7 +390,7 @@ for line in lines:
         parts = line.split('|')
         if len(parts) >= 2: vendor_map[parts[0].strip()] = parts[1].strip()
 
-current_date = datetime(2026, 5, 1)
+current_date = datetime.now(timezone(timedelta(hours=7))).replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)  # วันที่ปัจจุบัน (เวลาไทย) ใช้คำนวณวันเลยกำหนดส่งมอบ PO
 try:
     with open(file_z005, 'r', encoding='utf-8') as f: lines = f.readlines()
 except:
@@ -444,8 +444,6 @@ const demandDetailsData = {json.dumps(demand_details_data)};
 const pieRawData = {json.dumps(pie_summary.to_dict(orient='records'))};
 const mainData = {json.dumps(final_df.to_dict(orient='records'))};
 const projectGroups = {json.dumps(project_cols)};
-const wbsDataByMat = {json.dumps({mat: grp.to_dict(orient='records') for mat, grp in wbs_details.groupby('วัสดุ')})};
-const wbsDataByWbs = {json.dumps({wbs: grp.to_dict(orient='records') for wbs, grp in wbs_details.groupby('WBS')})};
 const me2nSummaryData = {json.dumps(me2n_summary.to_dict(orient='records') if not me2n_summary.empty else [])};
 const me2nDetailsData = {json.dumps(me2n_details.to_dict(orient='records') if not me2n_details.empty else [])};
 const me2nVendors = {json.dumps(me2n_vendors)};

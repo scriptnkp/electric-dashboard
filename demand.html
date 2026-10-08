@@ -300,6 +300,29 @@
 
     window.currentDynamicMainData = [];
 
+    // ---- สร้างข้อมูลรายละเอียดจาก demandDetailsData + wbsSummaryData (แทน wbsDataByWbs / wbsDataByMat ที่ทำให้ data.js ใหญ่) ----
+    let _rowsByWbs = null, _rowsByMat = null;
+    function buildDetailIndex() {
+        if (_rowsByWbs) return;
+        _rowsByWbs = {}; _rowsByMat = {};
+        const info = {};
+        wbsSummaryData.forEach(w => { info[w.WBS] = w; });
+        demandDetailsData.forEach(x => {
+            const w = info[x.WBS] || {};
+            const r = {
+                WBS: x.WBS, 'วัสดุ': x['วัสดุ'], MatDesc: x.MatDesc, Qty: x.Qty, Stock: x.Stock, Balance: x.Balance,
+                Network: w.Network || '-', Project_Name: w.ProjectName || '-', Status: w.Status || '-',
+                Applicant: w.Supervisor || '-', PendingCount: w.PendingItems || 0
+            };
+            (_rowsByWbs[x.WBS] = _rowsByWbs[x.WBS] || []).push(r);
+            (_rowsByMat[x['วัสดุ']] = _rowsByMat[x['วัสดุ']] || []).push(r);
+        });
+    }
+    function getWbsRows(wbs) { buildDetailIndex(); return _rowsByWbs[wbs] || []; }
+    function getMatRows(mat) { buildDetailIndex(); return _rowsByMat[mat] || []; }
+
+
+
     function getProjectGroup(wbs) {
         let w = wbs.toUpperCase();
         if(w.startsWith('C-68')) return 'ผู้ใช้ไฟ 68';
@@ -880,7 +903,7 @@
         let wbsName = wbsInfo.ProjectName || '';
         document.getElementById('modalTitle').innerHTML = `📦 รายการอุปกรณ์ใน WBS: <span style="color:#f1c40f;">${wbs}</span> <br><span style="font-size:14px; font-weight:normal;">${wbsName}</span>`;
         
-        const data = wbsDataByWbs[wbs] || [];
+        const data = getWbsRows(wbs);
         let h = '';
         data.forEach(r => {
             if(r.Qty > 0) { 
@@ -914,7 +937,7 @@
         let titleSuffix = groupName === 'ALL' ? 'ทั้งหมด' : `เฉพาะกลุ่ม: ${groupName}`;
         document.getElementById('matModalTitle').innerHTML = `📋 รายการ WBS ที่ใช้อุปกรณ์: <b>${matCode}</b> <br><span style="font-size:14px; font-weight:normal; color:#f1c40f;">${desc} (${titleSuffix})</span>`;
         
-        let data = wbsDataByMat[matCode] || [];
+        let data = getMatRows(matCode);
         let h = '';
         
         const activeWbsSet = new Set(currentWBSList.map(w => w.WBS));
