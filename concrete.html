@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>ผลิตภัณฑ์คอนกรีต</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="style.css">
+    <script src="data.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+    <style>
+        .table-wrapper { max-height: 65vh; overflow: auto; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 25px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: auto; }
+        th { background-color: #2c3e50; color: white; padding: 8px 6px; text-align: center; position: sticky; top: 0; z-index: 10; line-height: 1.3; white-space: normal; border: 1px solid #1f2d3a; }
+        thead tr.row2 th { top: 36px; }
+        td { border: 1px solid #ddd; padding: 6px 6px; vertical-align: middle; word-wrap: break-word; white-space: normal; }
+        tbody tr:hover { background-color: #e8f4f8; }
+        tfoot td { background: #f4f6f7; font-weight: bold; position: sticky; bottom: 0; border-top: 2px solid #2c3e50; }
+
+        .desc-col { white-space: normal; word-break: break-word; }
+        .num-col { text-align: right; white-space: nowrap; }
+        .nowrap-col { white-space: normal; word-break: break-word; text-align: center; }
+
+        .header-title { display: flex; align-items: center; gap: 10px; margin-top: 0; margin-bottom: 15px; color: #2c3e50; font-size: 22px; font-weight: bold; }
+        .card-green { background-color: #fef5e7; border-left: 6px solid #e67e22; padding: 15px 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); flex: 1; }
+        .val-text { font-size: 28px; font-weight: bold; color: #d35400; }
+
+        .badge-status { background-color: #34495e; color: white; padding: 3px 8px; border-radius: 12px; font-size: 11px; display: inline-block; white-space: normal; text-align: center; }
+
+        .link-text { color: #3498db; text-decoration: underline; cursor: pointer; font-weight: bold; padding: 2px 4px; border-radius: 4px; transition: 0.2s; font-size: 13px; }
+        .link-text:hover { background-color: #3498db; color: white; text-decoration: none; }
+        .link-num { color: #d35400; text-decoration: underline; cursor: pointer; font-weight: bold; }
+        .link-num:hover { color: #e67e22; background: #fdf2e9; }
+
+        .btn-reset { padding: 6px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: 32px; width: 100%; font-size: 13px; }
+        .btn-reset:hover { background: #c0392b; }
+        .btn-export { background-color: #27ae60; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 5px; }
+        .btn-export:hover { background-color: #219a52; }
+
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e0e6ed; margin-bottom: 20px; align-items: end; }
+        .filter-grid label { font-weight: bold; color: #34495e; display: block; margin-bottom: 5px; font-size: 13px; }
+        .filter-grid select, .filter-grid input[type=text] { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #ccc; height: 32px; font-size: 13px; box-sizing: border-box; }
+
+        .badge-branch { background-color: #fff; border: 1px solid #3498db; color: #2980b9; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; display: inline-block; margin-bottom: 2px; }
+        .badge-branch:hover, .badge-branch.active { background-color: #3498db; color: #fff; }
+        .badge-click { background-color: #fff; border: 1px solid #e67e22; color: #d35400; padding: 4px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; cursor: pointer; transition: 0.2s; display: inline-block; margin-bottom: 2px; }
+        .badge-click:hover, .badge-click.active { background-color: #e67e22; color: #fff; }
+
+        /* สีหัวคอลัมน์ตามกลุ่มงบ */
+        .g-คพจ { background-color: #7f8c8d !important; }
+        .g-คพพ { background-color: #16a085 !important; }
+        .g-คฟม { background-color: #8e44ad !important; }
+        .g-ผู้ใช้ไฟ { background-color: #2980b9 !important; }
+        .g-ลงทุน { background-color: #d35400 !important; }
+        .g-อื่นๆ { background-color: #95a5a6 !important; }
+        .branch-th { background-color: #1a252f !important; font-size: 14px; }
+        .branch-sep { border-left: 3px solid #34495e !important; }
+
+        /* Custom Multiselect */
+        .dropdown-check-list { display: inline-block; position: relative; width: 100%; }
+        .dropdown-check-list .anchor { width: 100%; display: block; padding: 6px 25px 6px 8px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; text-align: left; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; height: 32px; box-sizing: border-box; font-weight: normal; font-size: 13px; }
+        .dropdown-check-list .anchor:after { content: '▼'; position: absolute; right: 8px; top: 8px; font-size: 10px; color: #7f8c8d; }
+        .dropdown-check-list .items { display: none; position: absolute; background: white; border: 1px solid #ccc; max-height: 250px; overflow-y: auto; z-index: 99; min-width: 100%; border-radius: 4px; padding: 5px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); left: 0; }
+        .dropdown-check-list .items label { display: flex; align-items: flex-start; padding: 6px; cursor: pointer; font-weight: normal; border-bottom: 1px solid #f1f1f1; font-size: 12px; line-height: 1.4; white-space: normal; }
+        .dropdown-check-list .items label:hover { background-color: #e8f4f8; }
+        .dropdown-check-list .items input { margin-right: 8px; margin-top: 2px; }
+        .dropdown-check-list.visible .items { display: block; }
+
+        /* Modal */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; backdrop-filter: blur(2px); }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; width: 95%; max-width: 1100px; border-radius: 12px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; }
+        .modal-header { background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; border-bottom: 4px solid #e67e22; }
+        .modal-body { padding: 0; overflow-y: auto; overflow-x: auto; }
+        .modal-body th { top: 0; }
+        .close-btn { background: #e74c3c; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 14px; }
+        .close-btn:hover { background: #c0392b; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="index.html" class="nav-btn btn-graph">📊 หน้ากราฟ</a>
+        <a href="demand.html" class="nav-btn btn-demand">📋 ตารางความต้องการ</a>
+        <a href="concrete.html" class="nav-btn btn-concrete" style="box-shadow: 0 0 0 2px white;">🏗️ ผลิตภัณฑ์คอนกรีต</a>
+        <a href="me2n.html" class="nav-btn btn-me2n">📦 วัสดุรอนำเข้า (ME2N)</a>
+        <a href="plan1.html" class="nav-btn btn-plan">🛒 แผนซื้อ กฟฉ.1</a>
+        <a href="allocate.html" class="nav-btn btn-alloc">🚚 จัดสรรให้คลังต่างๆ</a>
+        <a href="budget.html" class="nav-btn btn-budget">💰 งบเงิน</a>
+        <a href="purchase.html" class="nav-btn btn-purchase">🛒 รายการจัดซื้อ</a>
+        <div class="update-box">🕒 อัปเดตล่าสุด: <span id="lastUpdatedText">กำลังอัปเดต...</span></div>
+    </div>
+
+    <div class="container">
+        <div class="header-title" id="topAnchor">🏗️ ผลิตภัณฑ์คอนกรีต (เสา / คาน / ฐานราก)</div>
+
+        <div class="filter-grid">
+            <div>
+                <label>📍 กฟฟ.: </label>
+                <select id="branchFilter" onchange="applyFilters()"><option value="ALL">✅ ทุก กฟฟ.</option></select>
+            </div>
+            <div>
+                <label>👷 ผู้ควบคุม: </label>
+                <select id="supFilter" onchange="applyFilters()"><option value="ALL">✅ ทั้งหมด</option></select>
+            </div>
+            <div>
+                <label>🔧 ทีมงาน: </label>
+                <select id="teamFilter" onchange="applyFilters()"><option value="ALL">✅ ทุกทีมงาน</option></select>
+            </div>
+            <div>
+                <label>💰 งบ: </label>
+                <div class="dropdown-check-list" id="budgetDropdown">
+                    <span class="anchor" onclick="toggleDropdown('budgetDropdown')">✅ ทั้งหมด</span>
+                    <div class="items" id="budgetDropdownItems"></div>
+                </div>
+            </div>
+            <div>
+                <label>🔍 ค้นหา WBS / วัสดุ: </label>
+                <input type="text" id="searchInput" placeholder="พิมพ์ WBS หรือรหัสวัสดุ..." oninput="applyFilters()">
+            </div>
+            <div>
+                <button class="btn-reset" onclick="resetFilters()">🔄 ล้างตัวกรอง</button>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+            <div class="card-green">
+                <div style="font-size: 14px; color: #7f8c8d; font-weight: bold; margin-bottom: 10px;">📝 จำนวน WBS ที่ค้างจ่ายผลิตภัณฑ์คอนกรีต (ตามตัวกรอง)</div>
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div style="min-width: 100px;">
+                        <span class="val-text" id="wbsCount">0</span>
+                        <span style="color:#7f8c8d; font-size:14px; font-weight:bold;">โครงการ</span>
+                    </div>
+                    <div id="branchBreakdown" style="display: flex; gap: 8px; flex-wrap: wrap; border-left: 2px solid #aeb6bf; padding-left: 15px; min-height: 24px;"></div>
+                    <div id="groupBreakdown" style="display: flex; gap: 8px; flex-wrap: wrap; border-left: 2px solid #f5cba7; padding-left: 15px; min-height: 24px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ตารางที่ 1 : ความต้องการ -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h3 style="margin: 0; color:#c0392b;">📌 ตารางที่ 1: ความต้องการผลิตภัณฑ์คอนกรีต (แยก กฟฟ. / ประเภทงบ)</h3>
+                <button class="btn-export" onclick="exportToExcel('tableDemand', 'Concrete_Demand')">📥 Export Excel (.xlsx)</button>
+            </div>
+            <div style="font-size:12px; color:#7f8c8d;">💡 คลิกตัวเลขเพื่อดูรายการ WBS</div>
+        </div>
+        <div class="table-wrapper">
+            <table id="tableDemand">
+                <thead id="demandHead"></thead>
+                <tbody id="demandBody"></tbody>
+                <tfoot id="demandFoot"></tfoot>
+            </table>
+        </div>
+
+        <!-- ตารางที่ 2 : MB52 -->
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 2px dashed #eee; padding-top: 15px; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <h3 style="margin: 0; color:#16a085;">📦 ตารางที่ 2: ยอดคงคลัง MB52 (D060 แยกที่เก็บ / แบตช์)</h3>
+                <button class="btn-export" onclick="exportToExcel('tableStock', 'Concrete_MB52')">📥 Export Excel (.xlsx)</button>
+            </div>
+            <div style="display: flex; gap: 15px; background: #e8f8f5; padding: 5px 12px; border-radius: 6px; border: 1px solid #a3e4d7; align-items:center;">
+                <label style="font-weight:bold; color:#16a085; font-size:13px; margin: 0;">แบตช์:</label>
+                <select id="batchFilter" onchange="renderStockTable()" style="padding:4px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
+                    <option value="ALL">✅ ทั้งหมด</option>
+                </select>
+            </div>
+        </div>
+        <div class="table-wrapper">
+            <table id="tableStock">
+                <thead id="stockHead"></thead>
+                <tbody id="stockBody"></tbody>
+                <tfoot id="stockFoot"></tfoot>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal: รายการ WBS ของช่องที่คลิก -->
+    <div id="cellModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="cellModalTitle">📋 รายการ WBS</span>
+                <button class="close-btn" onclick="closeModal('cellModal')">❌ ปิด</button>
+            </div>
+            <div class="modal-body">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="min-width:130px;">WBS</th>
+                            <th>โครงข่าย</th>
+                            <th style="min-width:200px;">ชื่องาน</th>
+                            <th>ปริมาณ</th>
+                            <th>สถานะ</th>
+                            <th>ทีมงาน</th>
+                            <th>ผู้ควบคุม</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cellModalBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const CONCRETE_CAT = 'ผลิตภัณฑ์คอนกรีต';
+    const BRANCH_ORDER = ['ธาตุพนม', 'นครพนม', 'นาแก', 'บ้านแพง'];
+    const GROUP_ORDER = ['คพจ', 'คพพ', 'คฟม', 'ผู้ใช้ไฟ', 'ลงทุน', 'อื่นๆ'];
+
+    let wbsInfoMap = {};     // WBS -> ข้อมูลโครงการ
+    let matCatMap = {};      // วัสดุ -> Category
+    let matDescMap = {};     // วัสดุ -> คำอธิบาย
+    let allocMap = {};       // จัดสรร (ME2N รอนำเข้า)
+    let prpoMap = {};        // จัดซื้อ (รอรับของ)
+    let concreteDemand = []; // demandDetailsData เฉพาะคอนกรีต
+    let currentRows = [];    // แถว demand ที่ผ่านตัวกรอง (ใช้ตอนคลิกดูรายละเอียด)
+
+    function getProjectGroup(wbs) {
+        let w = String(wbs).toUpperCase();
+        if (w.startsWith('C-68')) return 'ผู้ใช้ไฟ 68';
+        if (w.startsWith('C-69')) return 'ผู้ใช้ไฟ 69';
+        if (w.startsWith('I-67')) return 'ลงทุน 67';
+        if (w.startsWith('I-68')) return 'ลงทุน 68';
+        if (w.startsWith('I-69')) return 'ลงทุน 69';
+        if (w.startsWith('P-NHE03')) return 'คฟม';
+        if (w.startsWith('P-SEZ02')) return 'คพพ';
+        if (w.startsWith('P-TDD01')) return 'คพจ1';
+        if (w.startsWith('P-TDD02')) return 'คพจ2';
+        return 'อื่นๆ';
+    }
+
+    // รวมปีงบเป็นกลุ่มใหญ่ (ผู้ใช้ไฟ 68/69 -> ผู้ใช้ไฟ, ลงทุน 67/68/69 -> ลงทุน, คพจ1/2 -> คพจ)
+    function mergeGroup(wbs) {
+        const g = getProjectGroup(wbs);
+        if (g.startsWith('คพจ')) return 'คพจ';
+        if (g.startsWith('ผู้ใช้ไฟ')) return 'ผู้ใช้ไฟ';
+        if (g.startsWith('ลงทุน')) return 'ลงทุน';
+        return g;
+    }
+
+    const fmtNum = (n) => (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 });
+    const sortByOrder = (arr, order) => arr.sort((a, b) => {
+        let ia = order.indexOf(a), ib = order.indexOf(b);
+        if (ia === -1) ia = 999; if (ib === -1) ib = 999;
+        return ia === ib ? String(a).localeCompare(String(b)) : ia - ib;
+    });
+
+    function init() {
+        if (typeof lastUpdated !== 'undefined') document.getElementById('lastUpdatedText').innerText = lastUpdated;
+
+        if (typeof wbsSummaryData === 'undefined' || typeof demandDetailsData === 'undefined' || typeof mainData === 'undefined' || typeof projectGroups === 'undefined') {
+            document.getElementById('demandBody').innerHTML = '<tr><td colspan="20" style="text-align:center; color:#e74c3c; padding:20px; font-weight:bold;">⚠️ เซิร์ฟเวอร์กำลังอัปเดตข้อมูล โปรดรอสักครู่ แล้วกดรีเฟรชหน้าเว็บ (F5)</td></tr>';
+            return;
+        }
+        if (typeof concreteStockData === 'undefined') {
+            document.getElementById('stockBody').innerHTML = '<tr><td colspan="20" style="text-align:center; color:#e74c3c; padding:20px; font-weight:bold;">⚠️ data.js ยังไม่มีข้อมูล concreteStockData — ให้รัน run.py (GitHub Action) ใหม่อีกครั้ง</td></tr>';
+        }
+
+        wbsSummaryData.forEach(w => { wbsInfoMap[w.WBS] = w; });
+        mainData.forEach(m => { matCatMap[m['วัสดุ']] = m.Category; matDescMap[m['วัสดุ']] = m.MatDesc; });
+
+        concreteDemand = demandDetailsData.filter(d => d.Qty > 0 && matCatMap[d['วัสดุ']] === CONCRETE_CAT);
+
+        if (typeof me2nSummaryData !== 'undefined') {
+            me2nSummaryData.forEach(i => { allocMap[i['วัสดุ']] = (allocMap[i['วัสดุ']] || 0) + (parseFloat(i['ยังจะถูกส่งมอบ (ปริมาณ)']) || 0); });
+        }
+        if (typeof purchaseData !== 'undefined') {
+            purchaseData.forEach(i => { prpoMap[i['Mat']] = (prpoMap[i['Mat']] || 0) + (parseFloat(i['Qty']) || 0); });
+        }
+
+        // ตัวเลือกตัวกรอง (เฉพาะ WBS ที่มีความต้องการคอนกรีต)
+        const concWbs = new Set(concreteDemand.map(d => d.WBS));
+        const infos = [...concWbs].map(w => wbsInfoMap[w]).filter(Boolean);
+        const branches = sortByOrder([...new Set(infos.map(i => i.Branch))], BRANCH_ORDER);
+        const sups = [...new Set(infos.map(i => i.Supervisor))].filter(s => s && s !== '-').sort();
+        const teams = [...new Set(infos.map(i => i.Team))].filter(t => t && t !== '-').sort();
+
+        branches.forEach(b => document.getElementById('branchFilter').appendChild(new Option(b, b)));
+        sups.forEach(s => document.getElementById('supFilter').appendChild(new Option(s, s)));
+        teams.forEach(t => document.getElementById('teamFilter').appendChild(new Option(t, t)));
+
+        const bd = document.getElementById('budgetDropdownItems');
+        [...projectGroups].sort().forEach(g => {
+            bd.innerHTML += `<label><input type="checkbox" class="chk-budget" value="${g}" onchange="updateDropdownText('budgetDropdown','ทั้งหมด'); applyFilters();"> ${g}</label>`;
+        });
+
+        if (typeof concreteStockData !== 'undefined') {
+            const batches = [...new Set(concreteStockData.map(r => r.Batch))].sort();
+            batches.forEach(b => document.getElementById('batchFilter').appendChild(new Option(b, b)));
+        }
+
+        applyFilters();
+    }
+
+    function toggleDropdown(id) { document.getElementById(id).classList.toggle('visible'); }
+
+    function updateDropdownText(parentId, defaultText) {
+        const parent = document.getElementById(parentId);
+        const checked = parent.querySelectorAll('input[type="checkbox"]:checked');
+        const anchor = parent.querySelector('.anchor');
+        if (checked.length === 0) anchor.innerHTML = `✅ ${defaultText}`;
+        else if (checked.length === 1) anchor.innerText = checked[0].parentElement.innerText.trim();
+        else anchor.innerHTML = `📌 เลือกแล้ว ${checked.length} รายการ`;
+    }
+
+    window.onclick = function (event) {
+        if (!event.target.closest('.dropdown-check-list')) {
+            document.querySelectorAll('.dropdown-check-list.visible').forEach(d => d.classList.remove('visible'));
+        }
+        if (event.target.classList.contains('modal-overlay')) event.target.classList.remove('active');
+    };
+
+    function filterByBranchBadge(name) {
+        const el = document.getElementById('branchFilter');
+        el.value = (el.value === name) ? 'ALL' : name;
+        applyFilters();
+    }
+
+    function filterByGroupBadge(grp) {
+        // grp = กลุ่มรวม (เช่น ลงทุน) -> ติ๊กทุกปีงบในกลุ่มนั้น
+        const boxes = Array.from(document.querySelectorAll('.chk-budget'));
+        const inGrp = boxes.filter(c => c.value.startsWith(grp));
+        const allChecked = inGrp.length > 0 && inGrp.every(c => c.checked) && boxes.filter(c => c.checked).length === inGrp.length;
+        boxes.forEach(c => { c.checked = allChecked ? false : c.value.startsWith(grp); });
+        updateDropdownText('budgetDropdown', 'ทั้งหมด');
+        applyFilters();
+    }
+
+    function resetFilters() {
+        ['branchFilter', 'supFilter', 'teamFilter'].forEach(id => document.getElementById(id).value = 'ALL');
+        document.getElementById('searchInput').value = '';
+        document.querySelectorAll('.chk-budget').forEach(c => c.checked = false);
+        updateDropdownText('budgetDropdown', 'ทั้งหมด');
+        applyFilters();
+    }
+
+    function applyFilters() {
+        const br = document.getElementById('branchFilter').value;
+        const sup = document.getElementById('supFilter').value;
+        const tm = document.getElementById('teamFilter').value;
+        const q = document.getElementById('searchInput').value.trim().toUpperCase();
+        const selBudgets = Array.from(document.querySelectorAll('.chk-budget:checked')).map(c => c.value);
+
+        const passes = (d, ignoreBranch, ignoreGroup) => {
+            const w = wbsInfoMap[d.WBS];
+            if (!w) return false;
+            if (!ignoreBranch && br !== 'ALL' && w.Branch !== br) return false;
+            if (sup !== 'ALL' && w.Supervisor !== sup) return false;
+            if (tm !== 'ALL' && w.Team !== tm) return false;
+            if (!ignoreGroup && selBudgets.length && !selBudgets.includes(getProjectGroup(d.WBS))) return false;
+            if (q && !(d.WBS.toUpperCase().includes(q) || String(d['วัสดุ']).toUpperCase().includes(q) || String(d.MatDesc || '').toUpperCase().includes(q))) return false;
+            return true;
+        };
+
+        currentRows = concreteDemand.filter(d => passes(d, false, false));
+
+        // badge สรุป (นับ WBS)
+        const brSrc = concreteDemand.filter(d => passes(d, true, false));
+        const brCnt = {};
+        const seenB = new Set();
+        brSrc.forEach(d => { const k = d.WBS; if (!seenB.has(k)) { seenB.add(k); const b = wbsInfoMap[k].Branch; brCnt[b] = (brCnt[b] || 0) + 1; } });
+        document.getElementById('branchBreakdown').innerHTML = sortByOrder(Object.keys(brCnt), BRANCH_ORDER).map(b =>
+            `<span class="badge-branch ${br === b ? 'active' : ''}" onclick="filterByBranchBadge('${b}')">${b} : ${brCnt[b]}</span>`).join('');
+
+        const grSrc = concreteDemand.filter(d => passes(d, false, true));
+        const grCnt = {};
+        const seenG = new Set();
+        grSrc.forEach(d => { const k = d.WBS; if (!seenG.has(k)) { seenG.add(k); const g = mergeGroup(k); grCnt[g] = (grCnt[g] || 0) + 1; } });
+        document.getElementById('groupBreakdown').innerHTML = sortByOrder(Object.keys(grCnt), GROUP_ORDER).map(g =>
+            `<span class="badge-click" onclick="filterByGroupBadge('${g}')">${g} : ${grCnt[g]}</span>`).join('');
+
+        document.getElementById('wbsCount').innerText = new Set(currentRows.map(d => d.WBS)).size;
+
+        renderDemandTable();
+        renderStockTable();
+    }
+
+    // ---------- ตารางที่ 1 : ความต้องการ (วัสดุ x กฟฟ. x กลุ่มงบ) ----------
+    function renderDemandTable() {
+        // รวมข้อมูล
+        const agg = {};       // mat -> {key -> qty}
+        const colSet = {};    // branch -> Set(group)
+        currentRows.forEach(d => {
+            const b = wbsInfoMap[d.WBS].Branch;
+            const g = mergeGroup(d.WBS);
+            const key = b + '||' + g;
+            const mat = d['วัสดุ'];
+            agg[mat] = agg[mat] || { total: 0 };
+            agg[mat][key] = (agg[mat][key] || 0) + d.Qty;
+            agg[mat].total += d.Qty;
+            (colSet[b] = colSet[b] || new Set()).add(g);
+        });
+
+        const branchList = sortByOrder(Object.keys(colSet), BRANCH_ORDER);
+        const cols = []; // {b, g}
+        branchList.forEach(b => sortByOrder([...colSet[b]], GROUP_ORDER).forEach(g => cols.push({ b, g })));
+
+        // หัวตาราง 2 ชั้น
+        let h1 = `<tr><th rowspan="2" style="min-width:120px;">รหัสวัสดุ</th><th rowspan="2" style="min-width:240px;">คำอธิบายวัสดุ</th>`;
+        let h2 = `<tr class="row2">`;
+        branchList.forEach(b => {
+            const span = cols.filter(c => c.b === b).length;
+            h1 += `<th colspan="${span}" class="branch-th branch-sep">${b}</th>`;
+            cols.filter(c => c.b === b).forEach((c, i) => {
+                h2 += `<th class="g-${c.g} ${i === 0 ? 'branch-sep' : ''}">${c.g}</th>`;
+            });
+        });
+        h1 += `<th rowspan="2" style="background:#d35400;">รวมความต้องการ</th>
+               <th rowspan="2" style="background:#27ae60;">สต็อก D060</th>
+               <th rowspan="2" style="background:#8e44ad;">จัดสรร<br><span style="font-size:10px;">(รอนำเข้า)</span></th>
+               <th rowspan="2" style="background:#2980b9;">จัดซื้อ<br><span style="font-size:10px;">(รอรับของ)</span></th>
+               <th rowspan="2" style="background:#c0392b;">ขาด/เหลือ</th></tr>`;
+        h2 += `</tr>`;
+        document.getElementById('demandHead').innerHTML = h1 + h2;
+
+        // stock รวมต่อวัสดุ (ใช้ค่าเดียวกับ demand.html)
+        const stockOf = {};
+        demandDetailsData.forEach(d => { if (!(d['วัสดุ'] in stockOf)) stockOf[d['วัสดุ']] = d.Stock; });
+
+        const mats = Object.keys(agg).sort();
+        const colTotals = {};
+        let sumTotal = 0, sumStock = 0, sumAlloc = 0, sumPurch = 0, sumBal = 0;
+        let body = '';
+        mats.forEach(mat => {
+            const a = agg[mat];
+            const stock = stockOf[mat] || 0, alloc = allocMap[mat] || 0, purch = prpoMap[mat] || 0;
+            const bal = stock + alloc + purch - a.total;
+            sumTotal += a.total; sumStock += stock; sumAlloc += alloc; sumPurch += purch; sumBal += bal;
+
+            let tds = '';
+            cols.forEach((c, i) => {
+                const key = c.b + '||' + c.g;
+                const v = a[key] || 0;
+                const sep = (i === 0 || cols[i - 1].b !== c.b) ? 'branch-sep' : '';
+                if (v > 0) {
+                    colTotals[key] = (colTotals[key] || 0) + v;
+                    tds += `<td class="num-col ${sep}"><span class="link-num" onclick="showCellDetails('${mat}','${c.b}','${c.g}')">${fmtNum(v)}</span></td>`;
+                } else {
+                    tds += `<td class="num-col ${sep}" style="color:#d5d8dc;">-</td>`;
+                }
+            });
+            const balColor = bal < 0 ? '#e74c3c' : '#27ae60';
+            body += `<tr>
+                <td class="nowrap-col" style="font-weight:bold;">${mat}</td>
+                <td class="desc-col">${matDescMap[mat] || '-'}</td>
+                ${tds}
+                <td class="num-col" style="background:#fdf2e9; font-weight:bold;"><span class="link-num" onclick="showCellDetails('${mat}','ALL','ALL')">${fmtNum(a.total)}</span></td>
+                <td class="num-col" style="background:#eafaf1; color:#27ae60; font-weight:bold;">${fmtNum(stock)}</td>
+                <td class="num-col" style="background:#f4ecf7; color:#8e44ad; font-weight:bold;">${fmtNum(alloc)}</td>
+                <td class="num-col" style="background:#ebf5fb; color:#2980b9; font-weight:bold;">${fmtNum(purch)}</td>
+                <td class="num-col" style="background:#fdedec; color:${balColor}; font-weight:bold;">${fmtNum(bal)}</td>
+            </tr>`;
+        });
+        document.getElementById('demandBody').innerHTML = body || `<tr><td colspan="${cols.length + 7}" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>`;
+
+        let foot = '';
+        if (mats.length) {
+            foot = `<tr><td colspan="2" style="text-align:right;">รวมทั้งหมด</td>`;
+            cols.forEach((c, i) => {
+                const sep = (i === 0 || cols[i - 1].b !== c.b) ? 'branch-sep' : '';
+                foot += `<td class="num-col ${sep}">${fmtNum(colTotals[c.b + '||' + c.g] || 0)}</td>`;
+            });
+            foot += `<td class="num-col">${fmtNum(sumTotal)}</td><td class="num-col">${fmtNum(sumStock)}</td><td class="num-col">${fmtNum(sumAlloc)}</td><td class="num-col">${fmtNum(sumPurch)}</td><td class="num-col" style="color:${sumBal < 0 ? '#e74c3c' : '#27ae60'};">${fmtNum(sumBal)}</td></tr>`;
+        }
+        document.getElementById('demandFoot').innerHTML = foot;
+    }
+
+    // ---------- ตารางที่ 2 : MB52 (วัสดุ x แบตช์ x ที่เก็บ) ----------
+    function renderStockTable() {
+        if (typeof concreteStockData === 'undefined') return;
+        const batch = document.getElementById('batchFilter').value;
+
+        let rows = concreteStockData.filter(r => (batch === 'ALL' || r.Batch === batch));
+
+        const locs = [...new Set(rows.map(r => r.Loc))].sort();
+        const map = {}; // mat -> batch -> loc -> qty
+        const desc = {};
+        rows.forEach(r => {
+            const m = r['วัสดุ'];
+            desc[m] = r.MatDesc;
+            map[m] = map[m] || {};
+            map[m][r.Batch] = map[m][r.Batch] || {};
+            map[m][r.Batch][r.Loc] = (map[m][r.Batch][r.Loc] || 0) + r.Qty;
+        });
+
+        let head = `<tr><th style="min-width:120px;">รหัสวัสดุ</th><th style="min-width:240px;">คำอธิบายวัสดุ</th><th>แบตช์</th>`;
+        locs.forEach(l => { head += `<th style="background:#16a085;">${l}</th>`; });
+        head += `<th style="background:#d35400;">รวม</th></tr>`;
+        document.getElementById('stockHead').innerHTML = head;
+
+        const colTot = {}; let grand = 0;
+        let body = '';
+        Object.keys(map).sort().forEach(mat => {
+            const bs = Object.keys(map[mat]).sort((a, b) => (a === 'N' ? -1 : b === 'N' ? 1 : a.localeCompare(b)));
+            bs.forEach((b, idx) => {
+                let tds = '', rowSum = 0;
+                locs.forEach(l => {
+                    const v = map[mat][b][l] || 0;
+                    rowSum += v;
+                    if (v !== 0) {
+                        colTot[l] = (colTot[l] || 0) + v;
+                        tds += `<td class="num-col" style="${v < 0 ? 'color:#e74c3c;' : ''} font-weight:bold;">${fmtNum(v)}</td>`;
+                    } else tds += `<td class="num-col" style="color:#d5d8dc;">-</td>`;
+                });
+                grand += rowSum;
+                const top = idx === 0 ? 'border-top: 2px solid #aab7b8;' : '';
+                body += `<tr style="${top}">
+                    <td class="nowrap-col" style="font-weight:bold;">${idx === 0 ? mat : ''}</td>
+                    <td class="desc-col">${idx === 0 ? desc[mat] : ''}</td>
+                    <td class="nowrap-col"><span class="badge-status" style="background:${b === 'N' ? '#27ae60' : b === 'R' ? '#e67e22' : '#7f8c8d'};">${b}</span></td>
+                    ${tds}
+                    <td class="num-col" style="background:#fdf2e9; font-weight:bold; color:#d35400;">${fmtNum(rowSum)}</td>
+                </tr>`;
+            });
+        });
+        document.getElementById('stockBody').innerHTML = body || `<tr><td colspan="${locs.length + 4}" style="text-align:center; padding:20px;">ไม่มีข้อมูล</td></tr>`;
+
+        let foot = '';
+        if (body) {
+            foot = `<tr><td colspan="3" style="text-align:right;">รวมทั้งหมด</td>`;
+            locs.forEach(l => { foot += `<td class="num-col">${fmtNum(colTot[l] || 0)}</td>`; });
+            foot += `<td class="num-col">${fmtNum(grand)}</td></tr>`;
+        }
+        document.getElementById('stockFoot').innerHTML = foot;
+    }
+
+    // ---------- Modal ----------
+    function showCellDetails(mat, branch, group) {
+        const rows = currentRows.filter(d => d['วัสดุ'] === mat
+            && (branch === 'ALL' || wbsInfoMap[d.WBS].Branch === branch)
+            && (group === 'ALL' || mergeGroup(d.WBS) === group));
+        const scope = (branch === 'ALL') ? 'ทั้งหมด' : `${branch} / ${group}`;
+        document.getElementById('cellModalTitle').innerHTML = `📋 ${mat} <br><span style="font-size:14px; font-weight:normal; color:#f1c40f;">${matDescMap[mat] || ''} (${scope})</span>`;
+
+        let h = '', sum = 0;
+        rows.sort((a, b) => b.Qty - a.Qty).forEach(d => {
+            const w = wbsInfoMap[d.WBS] || {};
+            sum += d.Qty;
+            h += `<tr>
+                <td class="nowrap-col" style="font-weight:bold; color:#3498db;">${d.WBS}</td>
+                <td class="nowrap-col" style="color:#7f8c8d;">${w.Network || '-'}</td>
+                <td class="desc-col">${w.ProjectName || '-'}</td>
+                <td class="num-col" style="font-weight:bold; color:#c0392b;">${fmtNum(d.Qty)}</td>
+                <td class="nowrap-col"><span class="badge-status">${w.Status || '-'}</span></td>
+                <td class="nowrap-col">${w.Team || '-'}</td>
+                <td class="nowrap-col">${w.Supervisor || '-'}</td>
+            </tr>`;
+        });
+        h += `<tr style="background:#f4f6f7; font-weight:bold;"><td colspan="3" style="text-align:right;">รวม ${rows.length} WBS</td><td class="num-col" style="color:#c0392b;">${fmtNum(sum)}</td><td colspan="3"></td></tr>`;
+        document.getElementById('cellModalBody').innerHTML = h;
+        document.getElementById('cellModal').classList.add('active');
+    }
+
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function exportToExcel(tableId, filename) {
+        const table = document.getElementById(tableId);
+        const wb = XLSX.utils.table_to_book(table, { sheet: 'Sheet1' });
+        XLSX.writeFile(wb, filename + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    }
+
+    window.addEventListener('load', init);
+</script>
+</body>
+</html>

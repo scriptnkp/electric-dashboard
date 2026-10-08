@@ -118,7 +118,7 @@ df_me2n1 = read_sap_txt(file_me2n1)
 df_me2n1.rename(columns=renames_me2n, inplace=True)
 df_me2n1 = ensure_cols(df_me2n1, ['โรงงาน', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'เอกสารการจัดซื้อ', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'กลุ่มการจัดซื้อ', 'วันที่ส่งมอบ', 'วัสดุ', 'ข้อความสั้น', 'ข้อความส่วนหัว'])
 
-cat_map = {'1-00-001': 'ผลิตภัณฑ์คอนกรีต', '1-00-011': 'ผลิตภัณฑ์คอนกรีต', '1-00-004': 'ผลิตภัณฑ์คอนกรีต', '1-02-001': 'สายไฟ', '1-02-002': 'สายไฟ', '1-02-005': 'สายไฟ', '1-02-007': 'สายไฟ', '1-02-008': 'สายไฟ', '1-03-000': 'ลูกถ้วย', '1-04-000': 'แก้ไฟ', '1-05-000': 'หม้อแปลง', '1-05-001': 'หม้อแปลง'}
+cat_map = {'1-00-001': 'ผลิตภัณฑ์คอนกรีต', '1-00-011': 'ผลิตภัณฑ์คอนกรีต', '1-00-004': 'ผลิตภัณฑ์คอนกรีต', '1-00-021': 'ผลิตภัณฑ์คอนกรีต', '1-02-001': 'สายไฟ', '1-02-002': 'สายไฟ', '1-02-005': 'สายไฟ', '1-02-007': 'สายไฟ', '1-02-008': 'สายไฟ', '1-03-000': 'ลูกถ้วย', '1-04-000': 'แก้ไฟ', '1-05-000': 'หม้อแปลง', '1-05-001': 'หม้อแปลง'}
 def get_category(mat_code): return cat_map.get(str(mat_code)[:8], 'วัสดุอื่นๆ')
 def get_short_status(x):
     if pd.isna(x) or str(x) == '-': return "-"
@@ -262,6 +262,17 @@ final_df['Category'] = final_df['วัสดุ'].apply(get_category)
 final_df.rename(columns={'คำอธิบายวัสดุ': 'MatDesc'}, inplace=True)
 for col in project_cols:
     if col not in final_df.columns: final_df[col] = 0
+
+# ===== ข้อมูลสต็อก MB52 เฉพาะผลิตภัณฑ์คอนกรีต (แยกคลัง/แบทช์) สำหรับหน้า concrete.html =====
+df_stock_conc = df_stock[(df_stock['โรงงาน'] == 'D060') & (df_stock['ที่เก็บสินค้า'].isin(target_locs))].copy()
+df_stock_conc = df_stock_conc[df_stock_conc['วัสดุ'].apply(get_category) == 'ผลิตภัณฑ์คอนกรีต']
+df_stock_conc = ensure_cols(df_stock_conc, ['แบทช์'], '')
+df_stock_conc['แบทช์'] = df_stock_conc['แบทช์'].astype(str).str.strip().replace('', '-')
+concrete_stock = df_stock_conc.groupby(['วัสดุ', 'แบทช์', 'ที่เก็บสินค้า'])['ที่ใช้ได้'].sum().reset_index()
+concrete_stock = concrete_stock[concrete_stock['ที่ใช้ได้'] != 0]
+concrete_stock = pd.merge(concrete_stock, mat_desc, on='วัสดุ', how='left').fillna('-ไม่ระบุ-')
+concrete_stock.rename(columns={'คำอธิบายวัสดุ': 'MatDesc', 'แบทช์': 'Batch', 'ที่เก็บสินค้า': 'Loc', 'ที่ใช้ได้': 'Qty'}, inplace=True)
+concrete_stock_data = concrete_stock[['วัสดุ', 'MatDesc', 'Batch', 'Loc', 'Qty']].to_dict(orient='records')
 
 df_proj['Status_Short'] = df_proj['สถานะ'].apply(get_short_status)
 wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง']], df_proj[['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร']], on='องค์ประกอบ WBS', how='left')
@@ -444,6 +455,7 @@ const allocDetailsData = {json.dumps(alloc_details.to_dict(orient='records') if 
 const allocPlants = {json.dumps(alloc_plants)};
 const budgetData = {json.dumps(budget_data)};
 const purchaseData = {json.dumps(purchase_data)};
+const concreteStockData = {json.dumps(concrete_stock_data)};
 """
 
 with open('data.js', 'w', encoding='utf-8') as f: f.write(js_content)
