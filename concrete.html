@@ -71,7 +71,11 @@
         .modal-overlay.active { display: flex; }
         .modal-content { background: white; width: 95%; max-width: 1100px; border-radius: 12px; max-height: 85vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.2); overflow: hidden; }
         .modal-header { background: #2c3e50; color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; border-bottom: 4px solid #e67e22; }
-        .modal-body { padding: 0; overflow-y: auto; overflow-x: auto; }
+        .modal-body { padding: 0; overflow-y: auto; overflow-x: hidden; }
+        .modal-body table { table-layout: fixed; width: 100%; min-width: 0; white-space: normal; font-size: 12.5px; }
+        .modal-body td, .modal-body th { word-break: break-word; overflow-wrap: anywhere; }
+        .btn-modal-export { background: #27ae60; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 14px; margin-right: 8px; }
+        .btn-modal-export:hover { background: #219a52; }
         .modal-body th { top: 0; }
         .close-btn { background: #e74c3c; color: white; border: none; padding: 6px 12px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 14px; }
         .close-btn:hover { background: #c0392b; }
@@ -179,15 +183,21 @@
         <div class="modal-content">
             <div class="modal-header">
                 <span id="cellModalTitle">📋 รายการ WBS</span>
-                <button class="close-btn" onclick="closeModal('cellModal')">❌ ปิด</button>
+                <div style="display:flex; align-items:center; flex-shrink:0;">
+                    <button class="btn-modal-export" onclick="exportCellModal()">📥 Export Excel (.xlsx)</button>
+                    <button class="close-btn" onclick="closeModal('cellModal')">❌ ปิด</button>
+                </div>
             </div>
             <div class="modal-body">
-                <table style="width: 100%;">
+                <table>
+                    <colgroup>
+                        <col style="width:17%"><col style="width:11%"><col style="width:29%"><col style="width:8%"><col style="width:9%"><col style="width:9%"><col style="width:17%">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th style="min-width:130px;">WBS</th>
+                            <th>WBS</th>
                             <th>โครงข่าย</th>
-                            <th style="min-width:200px;">ชื่องาน</th>
+                            <th>ชื่องาน</th>
                             <th>ปริมาณ</th>
                             <th>สถานะ</th>
                             <th>ทีมงาน</th>
@@ -212,6 +222,7 @@
     let prpoMap = {};        // จัดซื้อ (รอรับของ)
     let concreteDemand = []; // demandDetailsData เฉพาะคอนกรีต
     let currentRows = [];    // แถว demand ที่ผ่านตัวกรอง (ใช้ตอนคลิกดูรายละเอียด)
+    let modalExport = null;  // ข้อมูลใน popup ล่าสุด ใช้ตอน Export
 
     function getProjectGroup(wbs) {
         let w = String(wbs).toUpperCase();
@@ -547,6 +558,32 @@
         h += `<tr style="background:#f4f6f7; font-weight:bold;"><td colspan="3" style="text-align:right;">รวม ${rows.length} WBS</td><td class="num-col" style="color:#c0392b;">${fmtNum(sum)}</td><td colspan="3"></td></tr>`;
         document.getElementById('cellModalBody').innerHTML = h;
         document.getElementById('cellModal').classList.add('active');
+
+        // เก็บข้อมูลสำหรับ Export
+        modalExport = {
+            mat, scope, title: matDescMap[mat] || '',
+            rows: rows.map(d => { const w = wbsInfoMap[d.WBS] || {}; return [d.WBS, w.Network || '-', w.ProjectName || '-', d.Qty, w.Status || '-', w.Team || '-', w.Supervisor || '-']; }),
+            total: sum
+        };
+    }
+
+    function exportCellModal() {
+        if (!modalExport) return;
+        const m = modalExport;
+        const aoa = [
+            [`${m.mat} : ${m.title}`],
+            [`ขอบเขต: ${m.scope}`, '', '', `จำนวน ${m.rows.length} WBS`],
+            [],
+            ['WBS', 'โครงข่าย', 'ชื่องาน', 'ปริมาณ', 'สถานะ', 'ทีมงาน', 'ผู้ควบคุม'],
+            ...m.rows,
+            ['', '', 'รวม', m.total, '', '', '']
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [{ wch: 26 }, { wch: 14 }, { wch: 50 }, { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 24 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'WBS');
+        const safe = (t) => String(t).replace(/[\\/:*?"<>|\s]+/g, '_');
+        XLSX.writeFile(wb, `Concrete_${m.mat}_${safe(m.scope)}_${new Date().toISOString().slice(0, 10)}.xlsx`);
     }
 
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
