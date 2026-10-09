@@ -403,7 +403,7 @@ for line in lines:
         parts = line.split('|')
         if len(parts) >= 21:
             wbs = parts[3].strip(); mat = parts[5].strip(); desc = parts[6].strip()
-            pr_num = parts[7].strip(); po_num = parts[8].strip(); gr_ir = parts[10].strip()
+            pr_num = parts[7].strip(); po_num = parts[8].strip(); contract_no = parts[9].strip(); gr_ir = parts[10].strip()
             
             pr_qty = parse_sap_num(parts[13])
             pr_price = parse_sap_num(parts[14])
@@ -431,7 +431,8 @@ for line in lines:
                 purchase_data.append({
                     'WBS': wbs, 'Company': company_name, 'DocNum': doc_num, 'DocType': doc_type, 'Mat': mat,
                     'Desc': desc, 'Qty': qty, 'Amount': amount, 'PoDate': po_date_str if po_date_str else '-',
-                    'DueDate': due_date_str, 'OverdueDays': overdue_days
+                    'DueDate': due_date_str, 'OverdueDays': overdue_days,
+                    'Contract': contract_no, 'Category': get_category(mat)
                 })
 
 tz_th = timezone(timedelta(hours=7))
