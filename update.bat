@@ -3,13 +3,13 @@ title Auto Push to GitHub
 cd /d "D:\Dashboard\text"
 
 echo =======================================
-echo   Syncing and pushing to GitHub...
+echo   Saving and syncing to GitHub...
 echo =======================================
 echo.
 
-git pull --rebase origin main
 git add .
 git commit -m "Update files: %date% %time%"
+git pull --rebase origin main
 git push origin main
 
 echo.
