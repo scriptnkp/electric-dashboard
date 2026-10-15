@@ -200,7 +200,13 @@
                 <button class="btn-export" onclick="exportToExcel('tableMat', 'Material_Summary_Export')">📥 Export Excel (.xlsx)</button>
             </div>
             
-            <div style="display: flex; gap: 15px; background: #fdf2e9; padding: 5px 12px; border-radius: 6px; border: 1px solid #f5cba7;">
+            <div style="display: flex; gap: 15px; background: #fdf2e9; padding: 5px 12px; border-radius: 6px; border: 1px solid #f5cba7; flex-wrap: wrap; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <label style="font-weight:bold; color:#c0392b; font-size:13px; margin: 0;">🔍 ค้นหารหัสวัสดุ:</label>
+                    <input type="text" id="matSearchInput" oninput="renderTable2FromSearch()" placeholder="รหัส/ชื่อวัสดุ (คั่นหลายรายการด้วย ,)" title="พิมพ์บางส่วนของรหัสหรือชื่อวัสดุ ใส่หลายรายการได้โดยคั่นด้วยเครื่องหมายคอมมา" style="padding:4px 8px; border-radius:4px; border:1px solid #ccc; font-size:12px; width: 250px;">
+                    <button onclick="document.getElementById('matSearchInput').value=''; renderTable2FromSearch();" title="ล้างคำค้นหา" style="border:none; background:#e74c3c; color:#fff; border-radius:4px; cursor:pointer; padding:3px 8px; font-size:12px;">✖</button>
+                    <span id="matSearchCount" style="font-size:12px; color:#7f8c8d; white-space:nowrap;"></span>
+                </div>
                 <div style="display: flex; align-items: center; gap: 5px;">
                     <label style="font-weight:bold; color:#8e44ad; font-size:13px; margin: 0;">🚚 จัดสรร (รอนำเข้า):</label>
                     <select id="allocFilter" onchange="applyFilters()" style="padding:4px; border-radius:4px; border:1px solid #ccc; font-size:12px;">
@@ -467,6 +473,7 @@
         document.getElementById('allocFilter').value = 'ALL';
         document.getElementById('prpoFilter').value = 'ALL';
         document.getElementById('wbsFilterInput').value = '';
+        document.getElementById('matSearchInput').value = '';
         
         document.querySelectorAll('.chk-budget').forEach(c => c.checked = false);
         document.querySelectorAll('.chk-pend').forEach(c => c.checked = false);
@@ -798,7 +805,11 @@
         renderDynamicTable2(wbsListForTable2);
     }
 
+    let lastTable2Base = [];
+    function renderTable2FromSearch() { renderDynamicTable2(lastTable2Base); }
+
     function renderDynamicTable2(baseList) {
+        lastTable2Base = baseList;
         const activeWbsSet = new Set(baseList.map(w => w.WBS));
         let matAgg = {};
         
@@ -860,8 +871,15 @@
         
         window.currentDynamicMainData = dynamicMainData;
 
+        // ค้นหารหัส/ชื่อวัสดุ (กรองเฉพาะแถวที่แสดงในตารางที่ 2 ส่วนข้อมูลสำหรับ popup ยังครบเหมือนเดิม)
+        const matTerms = (document.getElementById('matSearchInput').value || '').split(',').map(t => t.trim().toUpperCase()).filter(Boolean);
+        const visibleRows = matTerms.length
+            ? dynamicMainData.filter(r => matTerms.some(t => String(r['วัสดุ']).toUpperCase().includes(t) || String(r['คำอธิบายวัสดุ']).toUpperCase().includes(t)))
+            : dynamicMainData;
+        document.getElementById('matSearchCount').innerText = matTerms.length ? `พบ ${visibleRows.length} จาก ${dynamicMainData.length} รายการ` : `${dynamicMainData.length} รายการ`;
+
         let h = '';
-        dynamicMainData.forEach(r => {
+        visibleRows.forEach(r => {
             let pgCols = '';
             projectGroups.forEach(g => {
                 let val = r[g] || 0;
