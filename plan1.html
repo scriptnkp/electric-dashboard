@@ -5,6 +5,7 @@
     <title>แผนซื้อ กฟฉ.1</title>
     <link rel="stylesheet" href="style.css">
     <script src="data.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="navbar">
@@ -32,7 +33,7 @@
         <!-- เพิ่มตารางสรุป -->
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 20px;">
             <h2>1. สรุปแผนจัดซื้อ (คลิกรหัสวัสดุเพื่อกรอง)</h2>
-            <button onclick="selectedMat=null; applyFilters()" style="padding: 5px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">ล้างการเลือกวัสดุ</button>
+            <div style="display:flex; gap:8px;"><button onclick="exportSum()" style="padding: 5px 15px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📥 Export Excel (.xlsx)</button><button onclick="selectedMat=null; applyFilters()" style="padding: 5px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">ล้างการเลือกวัสดุ</button></div>
         </div>
         <div class="table-wrapper" style="max-height: 300px;">
             <table>
@@ -47,7 +48,7 @@
             </table>
         </div>
 
-        <h2>2. รายละเอียดเอกสารการจัดซื้อ (PO)</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 20px;"><h2>2. รายละเอียดเอกสารการจัดซื้อ (PO)</h2><button onclick="exportDet()" style="padding: 5px 15px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📥 Export Excel (.xlsx)</button></div>
         <div class="table-wrapper" style="max-height: 500px;">
             <table>
                 <thead style="background-color: #2c3e50;">
@@ -67,7 +68,8 @@
     </div>
 
 <script>
-    let selectedMat = null; // ตัวแปรเก็บค่าการคลิก
+    let selectedMat = null;
+    let exportSumRows = [], exportDetRows = []; // ตัวแปรเก็บค่าการคลิก
 
     function init() {
         document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
@@ -109,6 +111,7 @@
             </tr>`;
         });
         document.getElementById('sumBody').innerHTML = hSum;
+        exportSumRows = Object.values(newSum).map(r => [r.mat, r.desc, r.qty]);
 
         // 2. กรองข้อมูลตารางล่าง ถ้ามีการคลิกเลือกวัสดุจากตารางบน
         if(selectedMat) fd = fd.filter(i => i['วัสดุ'] === selectedMat);
@@ -133,12 +136,46 @@
             });
         }
         document.getElementById('detBody').innerHTML = hDet;
+        exportDetRows = fd.map((i, k) => [k + 1, i['เอกสารการจัดซื้อ'], i['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'], i['ที่เก็บสินค้า'], i['วัสดุ'], i['ข้อความสั้น'], i['ยังจะถูกส่งมอบ (ปริมาณ)'], i['ข้อความส่วนหัว'] || '']);
     }
 
     window.copyTxt = function(btn, txt) {
         navigator.clipboard.writeText(txt);
         let o = btn.innerHTML; btn.innerHTML = '✅'; setTimeout(() => btn.innerHTML = o, 1500);
     };
+
+    // ---------- Export Excel ----------
+    function selText(id) { const e = document.getElementById(id); return e && e.value !== 'ALL' ? e.options[e.selectedIndex].text : 'ทั้งหมด'; }
+    function exportAoa(aoa, widths, sheet, prefix) {
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = widths.map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, sheet);
+        XLSX.writeFile(wb, prefix + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    }
+
+    function exportSum() {
+        const aoa = [
+            ['แผนซื้อ กฟฉ.1 (DAN) : สรุปรายการ (ตารางที่ 1)'],
+            ['ประเภท: ' + selText('categoryFilter') + ' | ผู้ขาย/โรงงาน: ' + selText('vendorFilter'), '', 'อัปเดตข้อมูล: ' + (typeof lastUpdated !== 'undefined' ? lastUpdated : '-')],
+            [],
+            ['รหัสวัสดุ', 'ชื่ออุปกรณ์', 'ยอดรวม'],
+            ...exportSumRows,
+            ['', 'รวม ' + exportSumRows.length + ' รายการ', exportSumRows.reduce((a, r) => a + (Number(r[2]) || 0), 0)]
+        ];
+        exportAoa(aoa, [18, 50, 18], 'สรุป', 'Plan1_Summary');
+    }
+    function exportDet() {
+        const aoa = [
+            ['แผนซื้อ กฟฉ.1 (DAN) : รายละเอียดเอกสาร PO (ตารางที่ 2)'],
+            ['ประเภท: ' + selText('categoryFilter') + ' | ผู้ขาย/โรงงาน: ' + selText('vendorFilter') + (selectedMat ? ' | วัสดุที่เลือก: ' + selectedMat : ''), '', 'อัปเดตข้อมูล: ' + (typeof lastUpdated !== 'undefined' ? lastUpdated : '-')],
+            [],
+            ['ลำดับ', 'เอกสารการจัดซื้อ (PO)', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'จำนวน', 'ข้อความส่วนหัว'],
+            ...exportDetRows
+        ];
+        exportAoa(aoa, [8, 18, 34, 12, 18, 45, 12, 60], 'รายละเอียด PO', 'Plan1_Detail');
+    }
+
     window.onload = init;
 </script>
 </body>

@@ -5,6 +5,7 @@
     <title>รายการวัสดุรอนำเข้า (ME2N)</title>
     <link rel="stylesheet" href="style.css">
     <script src="data.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div class="navbar">
@@ -34,11 +35,11 @@
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 20px;">
             <h2>1. สรุปรายการวัสดุที่รอนำเข้า</h2>
-            <button onclick="selectedMat=null; applyFilters()" style="padding: 5px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">ล้างการเลือกวัสดุ</button>
+            <div style="display:flex; gap:8px;"><button onclick="exportSum()" style="padding: 5px 15px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📥 Export Excel (.xlsx)</button><button onclick="selectedMat=null; applyFilters()" style="padding: 5px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">ล้างการเลือกวัสดุ</button></div>
         </div>
         <div class="table-wrapper" style="max-height: 300px;"><table><thead><tr><th>รหัสวัสดุ (คลิกเพื่อกรอง)</th><th>ชื่ออุปกรณ์</th><th style="text-align:right">ยอดรอส่งมอบรวม</th></tr></thead><tbody id="sumBody"></tbody></table></div>
 
-        <h2>2. รายละเอียดเอกสารการจัดซื้อ (PO)</h2>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top: 20px;"><h2>2. รายละเอียดเอกสารการจัดซื้อ (PO)</h2><button onclick="exportDet()" style="padding: 5px 15px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📥 Export Excel (.xlsx)</button></div>
         <div class="table-wrapper" style="max-height: 500px;">
             <table><thead><tr><th>ลำดับ</th><th>PO (ชี้เพื่อดูส่วนหัว)</th><th>ผู้ขาย</th><th>คลัง</th><th>วัสดุ</th><th>ข้อความสั้น</th><th style="text-align:right">จำนวน</th></tr></thead><tbody id="detBody"></tbody></table>
         </div>
@@ -46,6 +47,7 @@
 
 <script>
     let selectedMat = null;
+    let exportSumRows = [], exportDetRows = [];
     function init() {
         document.getElementById('lastUpdatedText').innerText = typeof lastUpdated !== 'undefined' ? lastUpdated : 'กำลังอัปเดต...';
         const uniqueCat = [...new Set(me2nSummaryData.map(i => i.Category))].sort();
@@ -63,6 +65,7 @@
         detData.forEach(i => { if(!newSum[i['วัสดุ']]) newSum[i['วัสดุ']] = { mat: i['วัสดุ'], desc: i['ข้อความสั้น'], qty: 0 }; newSum[i['วัสดุ']].qty += i['ยังจะถูกส่งมอบ (ปริมาณ)']; });
 
         let hSum = ''; Object.values(newSum).forEach(r => { hSum += `<tr style="cursor:pointer; background:${selectedMat===r.mat?'#d5f5e3':''}" onclick="selectedMat='${r.mat}'; applyFilters();"><td class="wbs-link"><b>${r.mat}</b></td><td>${r.desc}</td><td style="text-align:right; color:#27ae60"><b>${r.qty}</b></td></tr>`; }); document.getElementById('sumBody').innerHTML = hSum;
+        exportSumRows = Object.values(newSum).map(r => [r.mat, r.desc, r.qty]);
 
         let fd = detData; if(selectedMat) fd = fd.filter(i => i['วัสดุ'] === selectedMat);
         let hDet = '', idx = 1;
@@ -71,8 +74,42 @@
             let poHtml = i['ข้อความส่วนหัว'] ? `<span title="${safeTxt}" style="border-bottom:1px dashed #7f8c8d; cursor:help;">${i['เอกสารการจัดซื้อ']}</span> <button onclick="copyTxt(this, '${safeTxt}')" class="copy-icon-btn">📋</button>` : i['เอกสารการจัดซื้อ'];
             hDet += `<tr><td style="text-align:center">${idx++}</td><td>${poHtml}</td><td>${i['ผู้ขาย/โรงงานผู้จัดหาวัสดุ']}</td><td>${i['ที่เก็บสินค้า']}</td><td><b>${i['วัสดุ']}</b></td><td>${i['ข้อความสั้น']}</td><td style="text-align:right; color:#d35400"><b>${i['ยังจะถูกส่งมอบ (ปริมาณ)'].toLocaleString()}</b></td></tr>`;
         }); document.getElementById('detBody').innerHTML = hDet;
+        exportDetRows = fd.map((i, k) => [k + 1, i['เอกสารการจัดซื้อ'], i['ผู้ขาย/โรงงานผู้จัดหาวัสดุ'], i['ที่เก็บสินค้า'], i['วัสดุ'], i['ข้อความสั้น'], i['ยังจะถูกส่งมอบ (ปริมาณ)'], i['ข้อความส่วนหัว'] || '']);
     }
     window.copyTxt = function(btn, txt) { navigator.clipboard.writeText(txt); let o = btn.innerHTML; btn.innerHTML = '✅'; setTimeout(() => btn.innerHTML = o, 1500); };
+
+    // ---------- Export Excel ----------
+    function selText(id) { const e = document.getElementById(id); return e && e.value !== 'ALL' ? e.options[e.selectedIndex].text : 'ทั้งหมด'; }
+    function exportAoa(aoa, widths, sheet, prefix) {
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = widths.map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, sheet);
+        XLSX.writeFile(wb, prefix + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    }
+
+    function exportSum() {
+        const aoa = [
+            ['วัสดุรอนำเข้า (ME2N) : สรุปรายการ (ตารางที่ 1)'],
+            ['ประเภท: ' + selText('categoryFilter') + ' | ผู้ขาย/โรงงาน: ' + selText('vendorFilter'), '', 'อัปเดตข้อมูล: ' + (typeof lastUpdated !== 'undefined' ? lastUpdated : '-')],
+            [],
+            ['รหัสวัสดุ', 'ชื่ออุปกรณ์', 'ยอดรอส่งมอบรวม'],
+            ...exportSumRows,
+            ['', 'รวม ' + exportSumRows.length + ' รายการ', exportSumRows.reduce((a, r) => a + (Number(r[2]) || 0), 0)]
+        ];
+        exportAoa(aoa, [18, 50, 18], 'สรุป', 'ME2N_Summary');
+    }
+    function exportDet() {
+        const aoa = [
+            ['วัสดุรอนำเข้า (ME2N) : รายละเอียดเอกสาร PO (ตารางที่ 2)'],
+            ['ประเภท: ' + selText('categoryFilter') + ' | ผู้ขาย/โรงงาน: ' + selText('vendorFilter') + (selectedMat ? ' | วัสดุที่เลือก: ' + selectedMat : ''), '', 'อัปเดตข้อมูล: ' + (typeof lastUpdated !== 'undefined' ? lastUpdated : '-')],
+            [],
+            ['ลำดับ', 'เอกสารการจัดซื้อ (PO)', 'ผู้ขาย', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'จำนวน', 'ข้อความส่วนหัว'],
+            ...exportDetRows
+        ];
+        exportAoa(aoa, [8, 18, 34, 12, 18, 45, 12, 60], 'รายละเอียด PO', 'ME2N_Detail');
+    }
+
     window.onload = init;
 </script>
 </body>

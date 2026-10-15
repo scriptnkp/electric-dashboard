@@ -6,6 +6,7 @@
     <link rel="icon" href="data:,">
     <link rel="stylesheet" href="style.css">
     <script src="data.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         .sec-head { display: flex; justify-content: space-between; align-items: center; margin: 20px 0 8px 0; flex-wrap: wrap; gap: 10px; }
         .sec-head h2 { margin: 0; color: #2c3e50; font-size: 18px; }
@@ -82,7 +83,7 @@
                 <h2>1. สรุปรวมรายการที่ซื้อ (คลิกรหัสวัสดุเพื่อกรองตารางที่ 2)</h2>
                 <span class="sel-chip" id="selChip"></span>
             </div>
-            <button class="btn-clear-mat" onclick="selectedMat=null; renderTable()">ล้างการเลือกวัสดุ</button>
+            <div style="display:flex; gap:8px;"><button onclick="exportSum()" style="padding: 5px 15px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📥 Export Excel (.xlsx)</button><button class="btn-clear-mat" onclick="selectedMat=null; renderTable()">ล้างการเลือกวัสดุ</button></div>
         </div>
         <div class="table-wrapper" style="max-height: 320px;">
             <table>
@@ -106,6 +107,7 @@
         <!-- ตารางที่ 2 : รายละเอียดเอกสาร -->
         <div class="sec-head">
             <h2>2. รายละเอียดเอกสารการจัดซื้อ (PR / PO)</h2>
+            <button onclick="exportDet()" style="padding: 5px 15px; background: #27ae60; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">📥 Export Excel (.xlsx)</button>
         </div>
         <div class="table-wrapper">
             <table>
@@ -128,6 +130,7 @@
 
 <script>
     let selectedMat = null; // วัสดุที่คลิกเลือกจากตารางที่ 1
+    let exportSumRows = [], exportDetRows = [];
 
     // ประเภทวัสดุ: ใช้ค่า Category จาก data.js (run.py) ถ้าไม่มีให้หาจาก mainData
     const _catByMat = {};
@@ -223,6 +226,8 @@
                 <td style="text-align:center;">${s.overdue.size ? `<span class="overdue">${s.overdue.size} เอกสาร</span>` : '-'}</td>
             </tr>`;
         });
+        exportSumRows = Object.values(sum).sort((a, b) => String(a.mat).localeCompare(String(b.mat)))
+            .map(s => [s.mat, s.desc, s.pr || 0, s.po || 0, s.pr + s.po, s.docs.size, s.amount, s.overdue.size]);
         document.getElementById('sumBody').innerHTML = hSum || '<tr><td colspan="8" style="text-align:center; padding: 20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
         document.getElementById('sumFoot').innerHTML = hSum ? `<tr>
             <td colspan="2" style="text-align:right;">รวม ${Object.keys(sum).length} รายการวัสดุ</td>
@@ -274,6 +279,11 @@
             </tr>`;
         });
 
+        exportDetRows = fd.map(r => [
+            r.WBS, r.DocType, r.DocNum, String(r.Contract || '').toUpperCase(), r.Company, catOf(r), r.Mat, r.Desc, r.Qty, r.Amount || 0,
+            r.PoDate, r.DueDate,
+            (typeof r.OverdueDays === 'number') ? (r.OverdueDays > 0 ? 'เกินกำหนด ' + r.OverdueDays + ' วัน' : 'ยังไม่ถึงกำหนด') : '-'
+        ]);
         document.getElementById('tableBody').innerHTML = h || '<tr><td colspan="8" style="text-align:center; padding: 20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
 
         document.getElementById('prCount').innerText = uniquePRs.size;
@@ -283,6 +293,45 @@
         document.getElementById('poAmount').innerText = fmtMoney(sumPOAmount);
 
         document.getElementById('totalAmount').innerText = fmtMoney(sumPRAmount + sumPOAmount);
+    }
+
+    // ---------- Export Excel ----------
+    function filterInfo() {
+        const sel = id => { const e = document.getElementById(id); return e.value === 'ALL' ? 'ทั้งหมด' : e.options[e.selectedIndex].text; };
+        const doc = document.getElementById('docFilter').value.trim();
+        return 'ประเภท: ' + sel('categoryFilter') + ' | WBS: ' + sel('wbsFilter') + (doc ? ' | เลขเอกสาร: ' + doc : '') + (selectedMat ? ' | วัสดุที่เลือก: ' + selectedMat : '');
+    }
+    function exportAoa(aoa, widths, sheet, prefix) {
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = widths.map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, sheet);
+        XLSX.writeFile(wb, prefix + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    }
+    function exportSum() {
+        const upd = 'อัปเดตข้อมูล: ' + (typeof lastUpdated !== 'undefined' ? lastUpdated : '-');
+        const info = filterInfo().replace(/ \| วัสดุที่เลือก: .*$/, '');
+        const tot = exportSumRows.reduce((a, r) => a + r[6], 0);
+        exportAoa([
+            ['รายการจัดซื้อ : สรุปรวมรายการที่ซื้อ (ตารางที่ 1)'],
+            [info, '', '', '', '', '', upd],
+            [],
+            ['รหัสวัสดุ', 'ชื่ออุปกรณ์', 'จำนวน PR', 'จำนวน PO', 'ยอดรวม', 'จำนวนเอกสาร', 'มูลค่า (฿)', 'เลยกำหนด (เอกสาร)'],
+            ...exportSumRows,
+            ['', 'รวม ' + exportSumRows.length + ' รายการวัสดุ', '', '', '', '', tot, '']
+        ], [18, 50, 12, 12, 12, 14, 16, 18], 'สรุป', 'Purchase_Summary');
+    }
+    function exportDet() {
+        const upd = 'อัปเดตข้อมูล: ' + (typeof lastUpdated !== 'undefined' ? lastUpdated : '-');
+        const tot = exportDetRows.reduce((a, r) => a + r[9], 0);
+        exportAoa([
+            ['รายการจัดซื้อ : รายละเอียดเอกสาร PR / PO (ตารางที่ 2)'],
+            [filterInfo(), '', '', '', '', '', '', '', '', '', '', upd],
+            [],
+            ['WBS', 'ประเภทเอกสาร', 'เลขเอกสาร', 'Contract No', 'บริษัท (ผู้ขาย)', 'ประเภทวัสดุ', 'วัสดุ', 'คำอธิบายวัสดุ', 'จำนวน', 'มูลค่า (฿)', 'วันที่ทำสัญญา PO', 'วันครบกำหนด', 'สถานะจัดส่ง'],
+            ...exportDetRows,
+            ['', '', '', '', '', '', '', 'รวม ' + exportDetRows.length + ' รายการ', '', tot, '', '', '']
+        ], [26, 12, 14, 16, 36, 14, 16, 45, 12, 16, 16, 14, 20], 'รายละเอียด', 'Purchase_Detail');
     }
 
     window.onload = init;
