@@ -103,10 +103,12 @@
 
     <div class="container">
         <div class="print-title">📊 สรุปภาพรวมวัสดุ-พัสดุ กฟอ. (ข้อมูล ณ <span id="printDate"></span>)</div>
+        <div class="print-title" style="font-size:14px; color:#c0392b;" id="printFilters"></div>
 
         <div class="toolbar">
             <div><label>🔍 ประเภทวัสดุ</label><select id="categoryFilter" onchange="onFilterChange()"><option value="ALL">รวมทั้งหมด</option></select></div>
             <div><label>📍 กฟฟ.</label><select id="branchFilter" onchange="onFilterChange()"><option value="ALL">ทุก กฟฟ.</option></select></div>
+            <div><label>👷 ผู้ควบคุม</label><select id="supFilter" onchange="onFilterChange()"><option value="ALL">ทุกคน</option></select></div>
             <button class="tb-btn tb-clear" onclick="clearAll()">🔄 ล้างตัวกรอง</button>
             <button class="tb-btn tb-print" onclick="window.print()">🖨️ พิมพ์ / บันทึกเป็น PDF</button>
         </div>
@@ -159,7 +161,7 @@
         <div class="grid g2">
             <div class="card">
                 <h3>👷 WBS ค้างจ่ายแยกตามผู้ควบคุมงาน (Top 10)</h3>
-                <div class="hint">เห็นภาระงานของแต่ละคน</div>
+                <div class="hint">คลิกที่แท่งเพื่อกรองเฉพาะผู้ควบคุมคนนั้น (คลิกซ้ำเพื่อยกเลิก)</div>
                 <div class="chart-box"><canvas id="supChart"></canvas></div>
             </div>
             <div class="card">
@@ -202,8 +204,9 @@
     };
     const C = { stock: '#27ae60', alloc: '#8e44ad', po: '#3498db', short: '#e74c3c', demand: '#e67e22' };
     const NO_SUP = 'ไม่ระบุผู้ควบคุม';
+    const supOf = wbs => { const w = wbsInfo[wbs]; return (w && w.Supervisor && w.Supervisor !== '-') ? w.Supervisor : NO_SUP; };
 
-    const state = { cat: 'ALL', branch: 'ALL', group: null };
+    const state = { cat: 'ALL', branch: 'ALL', sup: 'ALL', group: null };
     const charts = {};
     let wbsInfo = {}, matCat = {}, matDesc = {}, allocMap = {}, prpoMap = {}, stockOf = {}, baseRows = [];
 
@@ -252,18 +255,27 @@
         [...new Set(baseRows.map(d => matCat[d['วัสดุ']]))].sort().forEach(c => document.getElementById('categoryFilter').appendChild(new Option(c, c)));
         sortOrder([...new Set(baseRows.map(d => wbsInfo[d.WBS].Branch))], BRANCH_ORDER).forEach(b => document.getElementById('branchFilter').appendChild(new Option(b, b)));
 
+        // ผู้ควบคุมงาน (แสดงจำนวน WBS ต่อคนในวงเล็บ)
+        const supCnt = {};
+        const seen = new Set();
+        baseRows.forEach(d => { if (!seen.has(d.WBS)) { seen.add(d.WBS); const k = supOf(d.WBS); supCnt[k] = (supCnt[k] || 0) + 1; } });
+        Object.keys(supCnt).sort((a, b) => (a === NO_SUP) - (b === NO_SUP) || a.localeCompare(b, 'th'))
+            .forEach(k => document.getElementById('supFilter').appendChild(new Option(`${k} (${supCnt[k]})`, k)));
+
         renderAll();
     }
 
     function onFilterChange() {
         state.cat = document.getElementById('categoryFilter').value;
         state.branch = document.getElementById('branchFilter').value;
+        state.sup = document.getElementById('supFilter').value;
         renderAll();
     }
     function clearAll() {
-        state.cat = 'ALL'; state.branch = 'ALL'; state.group = null;
+        state.cat = 'ALL'; state.branch = 'ALL'; state.sup = 'ALL'; state.group = null;
         document.getElementById('categoryFilter').value = 'ALL';
         document.getElementById('branchFilter').value = 'ALL';
+        document.getElementById('supFilter').value = 'ALL';
         renderAll();
     }
 
@@ -273,6 +285,7 @@
             const w = wbsInfo[d.WBS];
             if (ignore !== 'cat' && state.cat !== 'ALL' && matCat[d['วัสดุ']] !== state.cat) return false;
             if (ignore !== 'branch' && state.branch !== 'ALL' && w.Branch !== state.branch) return false;
+            if (ignore !== 'sup' && state.sup !== 'ALL' && supOf(d.WBS) !== state.sup) return false;
             if (ignore !== 'group' && state.group && getProjectGroup(d.WBS) !== state.group) return false;
             return true;
         });
@@ -322,7 +335,7 @@
         renderCover(mats);
         renderTopShort(mats);
         renderCategory(mats);
-        renderSupervisor(rows);
+        renderSupervisor();
         renderStatus(rows);
     }
 
@@ -330,8 +343,11 @@
         let h = '';
         if (state.cat !== 'ALL') h += `<span class="chip">ประเภท: ${state.cat}</span>`;
         if (state.branch !== 'ALL') h += `<span class="chip">กฟฟ.: ${state.branch}</span>`;
+        if (state.sup !== 'ALL') h += `<span class="chip">ผู้ควบคุม: ${state.sup}</span>`;
         if (state.group) h += `<span class="chip">งบ: ${state.group}</span>`;
         document.getElementById('chips').innerHTML = h;
+        const pf = [state.cat !== 'ALL' ? 'ประเภท: ' + state.cat : null, state.branch !== 'ALL' ? 'กฟฟ.: ' + state.branch : null, state.sup !== 'ALL' ? 'ผู้ควบคุม: ' + state.sup : null, state.group ? 'งบ: ' + state.group : null].filter(Boolean);
+        document.getElementById('printFilters').innerText = pf.length ? 'ตัวกรอง: ' + pf.join(' | ') : '';
     }
 
     function renderKpis(mats, wbsSet, wbsBlocked) {
@@ -455,7 +471,7 @@
             w.n, w.items.map(it => `${it.mat} ${matDesc[it.mat] || ''} x${it.qty} [${stTxt[it.status]}]`).join('\n'),
             w.allOk ? 'ของพอทุกรายการ' : `ขาด ${w.nShort} / รอของ ${w.nInc}`
         ]);
-        const filt = [state.cat !== 'ALL' ? 'ประเภท: ' + state.cat : null, state.branch !== 'ALL' ? 'กฟฟ.: ' + state.branch : null, state.group ? 'งบ: ' + state.group : null].filter(Boolean).join(' | ') || 'ไม่มีตัวกรอง';
+        const filt = [state.cat !== 'ALL' ? 'ประเภท: ' + state.cat : null, state.branch !== 'ALL' ? 'กฟฟ.: ' + state.branch : null, state.sup !== 'ALL' ? 'ผู้ควบคุม: ' + state.sup : null, state.group ? 'งบ: ' + state.group : null].filter(Boolean).join(' | ') || 'ไม่มีตัวกรอง';
         const aoa = [
             ['WBS ที่ค้างจ่ายพัสดุ ' + label + (x.def.sub ? ' ' + x.def.sub : '')],
             [filt, '', '', '', '', '', '', 'อัปเดตข้อมูล: ' + (typeof lastUpdated !== 'undefined' ? lastUpdated : '-')],
@@ -601,17 +617,25 @@
         });
     }
 
-    function renderSupervisor(rows) {
-        const s = {};
-        rows.forEach(d => {
-            let k = wbsInfo[d.WBS].Supervisor; if (!k || k === '-') k = NO_SUP;
-            (s[k] = s[k] || new Set()).add(d.WBS);
-        });
-        const top = Object.entries(s).sort((a, b) => b[1].size - a[1].size).slice(0, 10);
+    function renderSupervisor() {
+        const rows = rowsFor('sup'); // แสดงทุกคนเสมอ เพื่อให้เลือกสลับคนได้
+        const sp = {};
+        rows.forEach(d => { (sp[supOf(d.WBS)] = sp[supOf(d.WBS)] || new Set()).add(d.WBS); });
+        let top = Object.entries(sp).sort((a, b) => b[1].size - a[1].size).slice(0, 10);
+        if (state.sup !== 'ALL' && sp[state.sup] && !top.some(t => t[0] === state.sup)) top.push([state.sup, sp[state.sup]]);
         draw('supChart', {
             type: 'bar',
-            data: { labels: top.map(t => t[0]), datasets: [{ label: 'จำนวน WBS', data: top.map(t => t[1].size), backgroundColor: top.map(t => t[0] === NO_SUP ? '#bdc3c7' : '#3498db') }] },
-            options: { indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: 'จำนวน WBS' } } } }
+            data: { labels: top.map(t => t[0]), datasets: [{ label: 'จำนวน WBS', data: top.map(t => t[1].size), backgroundColor: top.map(t => t[0] === state.sup ? '#e67e22' : (t[0] === NO_SUP ? '#bdc3c7' : '#3498db')) }] },
+            options: {
+                indexAxis: 'y', maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { title: { display: true, text: 'จำนวน WBS' } } },
+                onClick: (e, els) => {
+                    if (!els.length) return;
+                    const name = top[els[0].index][0];
+                    state.sup = (state.sup === name) ? 'ALL' : name;
+                    document.getElementById('supFilter').value = state.sup;
+                    renderAll();
+                }
+            }
         });
     }
 
