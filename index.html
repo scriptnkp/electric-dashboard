@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
     <script src="data.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
     <style>
         .toolbar { display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; background: #eaf2f8; padding: 12px 18px; border-radius: 8px; margin-bottom: 15px; }
@@ -28,6 +29,33 @@
         .kpi.amber { border-left-color: #f39c12; } .kpi.amber .k-value { color: #d68910; }
         .kpi.green { border-left-color: #27ae60; } .kpi.green .k-value { color: #1e8449; }
         .kpi.purple { border-left-color: #8e44ad; } .kpi.purple .k-value { color: #7d3c98; }
+
+        .bucket-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 8px; }
+        .bucket { border: 1px solid #d6e4f0; border-radius: 10px; padding: 12px 14px; background: #f8fbfe; cursor: pointer; text-align: center; transition: 0.15s; }
+        .bucket:hover { box-shadow: 0 3px 10px rgba(0,0,0,0.12); transform: translateY(-2px); }
+        .bucket .b-label { font-size: 13px; font-weight: bold; color: #34495e; }
+        .bucket .b-sub { font-size: 11px; color: #95a5a6; min-height: 14px; }
+        .bucket .b-num { font-size: 32px; font-weight: bold; color: #2980b9; line-height: 1.2; }
+        .bucket .b-unit { font-size: 12px; color: #7f8c8d; }
+        .bucket .b-ready { margin-top: 6px; font-size: 12px; color: #1e8449; background: #e9f7ef; border-radius: 10px; padding: 2px 6px; display: inline-block; }
+        .bucket.sum { background: #fff6e5; border-color: #f5cba7; border-width: 2px; }
+        .bucket.sum .b-num { color: #d35400; }
+        .bucket.gt { background: #fdf2f2; border-color: #f5b7b1; }
+        .bucket.gt .b-num { color: #c0392b; }
+        .bucket.zero { opacity: 0.55; cursor: default; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: white; width: 95%; max-width: 1200px; border-radius: 12px; max-height: 88vh; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.25); overflow: hidden; }
+        .modal-header { background: #2c3e50; color: white; padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 18px; font-weight: bold; border-bottom: 4px solid #e67e22; gap: 10px; }
+        .modal-body { overflow-y: auto; overflow-x: hidden; }
+        .modal-body table { table-layout: fixed; width: 100%; min-width: 0; white-space: normal; border-collapse: collapse; font-size: 12.5px; }
+        .modal-body th { background: #2c3e50; color: white; padding: 8px 6px; position: sticky; top: 0; z-index: 2; }
+        .modal-body td { border: 1px solid #ddd; padding: 6px; vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
+        .m-btn { border: none; color: white; padding: 6px 12px; cursor: pointer; border-radius: 6px; font-weight: bold; font-size: 14px; }
+        .m-export { background: #27ae60; margin-right: 8px; } .m-close { background: #e74c3c; }
+        .mt { display: inline-block; font-size: 10.5px; font-weight: bold; padding: 0 6px; border-radius: 8px; margin-left: 4px; }
+        .mt-short { background: #fdedec; color: #c0392b; } .mt-inc { background: #fef5e7; color: #d68910; } .mt-ok { background: #e9f7ef; color: #1e8449; }
 
         .insight { background: #fffbe6; border: 1px solid #f7e08a; border-left: 6px solid #f1c40f; border-radius: 8px; padding: 12px 18px; margin-bottom: 18px; }
         .insight h3 { margin: 0 0 6px 0; font-size: 16px; color: #7d6608; }
@@ -86,6 +114,12 @@
 
         <div class="kpi-grid" id="kpiGrid"></div>
 
+        <div class="card" style="margin-bottom: 18px;">
+            <h3>🧮 งาน (WBS) แยกตามจำนวนรายการพัสดุที่ยังค้างจ่าย</h3>
+            <div class="hint">นับจำนวนรหัสวัสดุที่ยังค้างจ่ายต่อ 1 WBS | "ของพอทุกรายการ" = สต็อกพอจ่ายครบทุกรายการ | คลิกช่องเพื่อดูรายชื่อ WBS</div>
+            <div class="bucket-grid" id="bucketGrid"></div>
+        </div>
+
         <div class="insight">
             <h3>💡 ประเด็นสำคัญ (สรุปอัตโนมัติตามตัวกรอง)</h3>
             <ul id="insightList"></ul>
@@ -137,6 +171,25 @@
 
         <div style="font-size:12px; color:#95a5a6; text-align:right;">
             * นับเฉพาะ WBS ที่ยังค้างจ่ายพัสดุ (ปริมาณผลต่าง &gt; 0) และไม่รวมวัสดุรหัสขึ้นต้นด้วย 9 — จำนวนรายการวัสดุจึงอาจน้อยกว่าหน้า "ตารางความต้องการ"
+        </div>
+    </div>
+
+<div id="bucketModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span id="bucketTitle">รายชื่อ WBS</span>
+                <div style="display:flex; align-items:center; flex-shrink:0;">
+                    <button class="m-btn m-export" onclick="exportBucket()">📥 Export Excel (.xlsx)</button>
+                    <button class="m-btn m-close" onclick="document.getElementById('bucketModal').classList.remove('active')">❌ ปิด</button>
+                </div>
+            </div>
+            <div class="modal-body">
+                <table>
+                    <colgroup><col style="width:4%"><col style="width:17%"><col style="width:20%"><col style="width:12%"><col style="width:8%"><col style="width:31%"><col style="width:8%"></colgroup>
+                    <thead><tr><th>#</th><th>WBS</th><th>ชื่องาน</th><th>ผู้ควบคุม</th><th>สถานะ</th><th>รายการวัสดุที่ค้างจ่าย</th><th>ความพร้อม</th></tr></thead>
+                    <tbody id="bucketBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -257,9 +310,13 @@
         const wbsSet = new Set(rows.map(d => d.WBS));
         const wbsBlocked = new Set(rows.filter(d => shortSet.has(d['วัสดุ'])).map(d => d.WBS));
 
+        const statusOf = {}; mats.forEach(m => { statusOf[m.mat] = m.status; });
+        const buckets = computeBuckets(rows, statusOf);
+
         renderChips();
         renderKpis(mats, wbsSet, wbsBlocked);
-        renderInsights(rows, mats, wbsSet, wbsBlocked);
+        renderBuckets(buckets);
+        renderInsights(rows, mats, wbsSet, wbsBlocked, buckets);
         renderPie();
         renderBranch();
         renderCover(mats);
@@ -294,7 +351,7 @@
             <div class="kpi ${i.c}"><div class="k-label">${i.l}</div><div class="k-value">${i.v}</div><div class="k-sub">${i.s}</div></div>`).join('');
     }
 
-    function renderInsights(rows, mats, wbsSet, wbsBlocked) {
+    function renderInsights(rows, mats, wbsSet, wbsBlocked, buckets) {
         const li = [];
         if (!rows.length) { document.getElementById('insightList').innerHTML = '<li>ไม่มีข้อมูลตามเงื่อนไขที่เลือก</li>'; return; }
         const short = mats.filter(m => m.status === 'short').sort((a, b) => b.short - a.short);
@@ -304,6 +361,10 @@
         const byWbs = short.slice().sort((a, b) => b.nWbs - a.nWbs)[0];
         if (byWbs) li.push(`วัสดุที่ขาดและกระทบหลาย WBS ที่สุด: <b>${byWbs.desc}</b> (${byWbs.mat}) ใช้ใน ${byWbs.nWbs} WBS ขาด ${fmt(byWbs.short)} จาก ${fmt(byWbs.demand)} หน่วย`);
 
+        if (buckets && buckets.le5 && buckets.le5.list.length) {
+            const b = buckets.le5;
+            li.push(`WBS ที่เหลือพัสดุ <b>ไม่เกิน 5 รายการ</b> มี <b>${b.list.length}</b> โครงการ (${pct(b.list.length, wbsSet.size)}) ในนี้ของพอทุกรายการแล้ว <b>${b.ready}</b> โครงการ → พร้อมเบิกจ่ายได้ทันที`);
+        }
         const g = {}; rows.forEach(d => { const k = getProjectGroup(d.WBS); (g[k] = g[k] || new Set()).add(d.WBS); });
         const gTop = Object.entries(g).sort((a, b) => b[1].size - a[1].size)[0];
         if (gTop) li.push(`งบที่มี WBS ค้างมากที่สุด: <b>${gTop[0]}</b> ${gTop[1].size} โครงการ (${pct(gTop[1].size, wbsSet.size)})`);
@@ -316,6 +377,100 @@
         if (noSup) li.push(`WBS ที่ยังไม่ระบุผู้ควบคุมงาน: <b>${noSup}</b> โครงการ (${pct(noSup, wbsSet.size)}) → ควรกำหนดผู้รับผิดชอบ`);
         document.getElementById('insightList').innerHTML = li.map(t => `<li>${t}</li>`).join('');
     }
+
+    // ---------- งาน (WBS) แยกตามจำนวนรายการพัสดุที่ค้างจ่าย ----------
+    let bucketStore = {}, currentBucket = null;
+    const BUCKET_DEFS = [
+        { key: '1', label: '1 รายการ', test: n => n === 1 },
+        { key: '2', label: '2 รายการ', test: n => n === 2 },
+        { key: '3', label: '3 รายการ', test: n => n === 3 },
+        { key: '4', label: '4 รายการ', test: n => n === 4 },
+        { key: '5', label: '5 รายการ', test: n => n === 5 },
+        { key: 'le5', label: 'ไม่เกิน 5 รายการ', sub: '(รวม 1–5 รายการ)', test: n => n <= 5, cls: 'sum' },
+        { key: 'gt5', label: 'มากกว่า 5 รายการ', test: n => n > 5, cls: 'gt' }
+    ];
+
+    function computeBuckets(rows, statusOf) {
+        const per = {};
+        rows.forEach(d => { const o = per[d.WBS] = per[d.WBS] || {}; o[d['วัสดุ']] = (o[d['วัสดุ']] || 0) + d.Qty; });
+        const all = Object.keys(per).map(w => {
+            const items = Object.entries(per[w]).map(([mat, qty]) => ({ mat, qty, status: statusOf[mat] || 'short' }));
+            const allOk = items.every(i => i.status === 'ok');
+            return { wbs: w, items, n: items.length, allOk, nShort: items.filter(i => i.status === 'short').length, nInc: items.filter(i => i.status === 'incoming').length };
+        });
+        const out = {};
+        BUCKET_DEFS.forEach(d => {
+            const list = all.filter(x => d.test(x.n));
+            out[d.key] = { def: d, list, ready: list.filter(x => x.allOk).length };
+        });
+        out._total = all.length;
+        bucketStore = out;
+        return out;
+    }
+
+    function renderBuckets(b) {
+        document.getElementById('bucketGrid').innerHTML = BUCKET_DEFS.map(d => {
+            const x = b[d.key];
+            const n = x.list.length;
+            return `<div class="bucket ${d.cls || ''} ${n === 0 ? 'zero' : ''}" ${n ? `onclick="openBucket('${d.key}')"` : ''}>
+                <div class="b-label">${d.label}</div>
+                <div class="b-sub">${d.sub || ''}</div>
+                <div class="b-num">${fmt(n)}</div>
+                <div class="b-unit">WBS (${pct(n, b._total)} ของทั้งหมด)</div>
+                ${n ? `<div class="b-ready">✅ ของพอทุกรายการ ${x.ready}</div>` : ''}
+            </div>`;
+        }).join('');
+    }
+
+    function bucketRows(key) {
+        const x = bucketStore[key];
+        return x.list.slice().sort((a, b) => (b.allOk - a.allOk) || a.wbs.localeCompare(b.wbs)).map(w => {
+            const info = wbsInfo[w.wbs] || {};
+            return { w, info };
+        });
+    }
+
+    function openBucket(key) {
+        currentBucket = key;
+        const x = bucketStore[key];
+        document.getElementById('bucketTitle').innerHTML = `🧮 WBS ที่ค้างจ่าย ${x.def.label} <span style="font-size:13px; font-weight:normal; color:#f1c40f;">(${x.list.length} WBS | ของพอทุกรายการ ${x.ready})</span>`;
+        const tag = s => s === 'ok' ? '<span class="mt mt-ok">พอ</span>' : s === 'incoming' ? '<span class="mt mt-inc">รอของ</span>' : '<span class="mt mt-short">ขาด</span>';
+        let h = '';
+        bucketRows(key).forEach(({ w, info }, i) => {
+            const items = w.items.map(it => `${it.mat} ${(matDesc[it.mat] || '').slice(0, 38)} ×${fmt(it.qty)} ${tag(it.status)}`).join('<br>');
+            const ready = w.allOk ? '<span class="mt mt-ok">ของพอทุกรายการ</span>' : `<span class="mt mt-short">ขาด ${w.nShort}</span>${w.nInc ? `<span class="mt mt-inc">รอของ ${w.nInc}</span>` : ''}`;
+            h += `<tr><td>${i + 1}</td><td><b style="color:#2980b9;">${w.wbs}</b></td><td>${info.ProjectName || '-'}</td><td>${info.Supervisor && info.Supervisor !== '-' ? info.Supervisor : NO_SUP}</td><td>${info.Status || '-'}</td><td>${items}</td><td>${ready}</td></tr>`;
+        });
+        document.getElementById('bucketBody').innerHTML = h;
+        document.getElementById('bucketModal').classList.add('active');
+    }
+
+    function exportBucket() {
+        if (!currentBucket) return;
+        const x = bucketStore[currentBucket];
+        const label = x.def.label;
+        const stTxt = { ok: 'พอ', incoming: 'รอของ', short: 'ขาด' };
+        const rows = bucketRows(currentBucket).map(({ w, info }, i) => [
+            i + 1, w.wbs, info.Network || '-', info.ProjectName || '-', info.Supervisor && info.Supervisor !== '-' ? info.Supervisor : NO_SUP, info.Team || '-', info.Status || '-',
+            w.n, w.items.map(it => `${it.mat} ${matDesc[it.mat] || ''} x${it.qty} [${stTxt[it.status]}]`).join('\n'),
+            w.allOk ? 'ของพอทุกรายการ' : `ขาด ${w.nShort} / รอของ ${w.nInc}`
+        ]);
+        const filt = [state.cat !== 'ALL' ? 'ประเภท: ' + state.cat : null, state.branch !== 'ALL' ? 'กฟฟ.: ' + state.branch : null, state.group ? 'งบ: ' + state.group : null].filter(Boolean).join(' | ') || 'ไม่มีตัวกรอง';
+        const aoa = [
+            ['WBS ที่ค้างจ่ายพัสดุ ' + label + (x.def.sub ? ' ' + x.def.sub : '')],
+            [filt, '', '', '', '', '', '', 'อัปเดตข้อมูล: ' + (typeof lastUpdated !== 'undefined' ? lastUpdated : '-')],
+            [],
+            ['ลำดับ', 'WBS', 'โครงข่าย', 'ชื่องาน', 'ผู้ควบคุม', 'ทีมงาน', 'สถานะ', 'จำนวนรายการ', 'รายการวัสดุที่ค้างจ่าย', 'ความพร้อม'],
+            ...rows
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [{ wch: 7 }, { wch: 26 }, { wch: 14 }, { wch: 40 }, { wch: 22 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 70 }, { wch: 22 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'WBS');
+        XLSX.writeFile(wb, `WBS_Items_${currentBucket}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    }
+
+    window.addEventListener('click', e => { if (e.target.id === 'bucketModal') e.target.classList.remove('active'); });
 
     function renderPie() {
         const rows = rowsFor('group');
