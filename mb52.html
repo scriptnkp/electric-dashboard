@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>คงคลัง MB52 (D060)</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="style.css">
+    <script src="data.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .btn-concrete { background-color: #e67e22; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3); }
+        .btn-mb52 { background-color: #5c6bc0; box-shadow: 0 4px 10px rgba(92, 107, 192, 0.3); }
+
+        .header-title { display: flex; align-items: center; gap: 10px; margin: 0 0 15px 0; color: #2c3e50; font-size: 22px; font-weight: bold; flex-wrap: wrap; }
+        .header-title small { font-size: 13px; color: #7f8c8d; font-weight: normal; }
+
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e0e6ed; margin-bottom: 18px; align-items: end; }
+        .filter-grid label { font-weight: bold; color: #34495e; display: block; margin-bottom: 5px; font-size: 13px; }
+        .filter-grid select, .filter-grid input[type=text] { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #ccc; height: 32px; font-size: 13px; box-sizing: border-box; min-width: 0; }
+        .chk-line { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #34495e; height: 32px; font-weight: bold; }
+        .btn-reset { padding: 6px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: 32px; width: 100%; font-size: 13px; }
+        .btn-reset:hover { background: #c0392b; }
+
+        .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 18px; }
+        .kpi { border-radius: 10px; padding: 12px 16px; background: #fff; border: 1px solid #e3e8ee; border-left: 6px solid #5c6bc0; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .kpi .k-label { font-size: 12.5px; color: #7f8c8d; font-weight: bold; }
+        .kpi .k-value { font-size: 28px; font-weight: bold; color: #2c3e50; line-height: 1.25; }
+        .kpi .k-sub { font-size: 12px; color: #7f8c8d; }
+        .kpi.red { border-left-color: #e74c3c; } .kpi.red .k-value { color: #c0392b; }
+        .kpi.green { border-left-color: #27ae60; } .kpi.green .k-value { color: #1e8449; }
+        .kpi.amber { border-left-color: #f39c12; } .kpi.amber .k-value { color: #d68910; }
+
+        .sec-head { display: flex; justify-content: space-between; align-items: center; margin: 20px 0 8px 0; flex-wrap: wrap; gap: 10px; }
+        .sec-head h2 { margin: 0; color: #2c3e50; font-size: 18px; }
+        .btn-export { background-color: #27ae60; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-export:hover { background-color: #219a52; }
+        .btn-clear-mat { padding: 5px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+        .sel-chip { background: #d5f5e3; color: #1e8449; border: 1px solid #a9dfbf; padding: 3px 10px; border-radius: 14px; font-size: 12px; font-weight: bold; display: none; }
+
+        .table-wrapper { max-height: 62vh; overflow: auto; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 25px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background-color: #2c3e50; color: white; padding: 8px 6px; text-align: center; position: sticky; top: 0; z-index: 10; line-height: 1.3; white-space: normal; }
+        td { border: 1px solid #ddd; padding: 5px 6px; vertical-align: middle; white-space: normal; word-break: break-word; }
+        .num-col { text-align: right; white-space: nowrap; }
+        .ctr { text-align: center; white-space: nowrap; }
+        .neg { color: #e74c3c; font-weight: bold; }
+        .zero { color: #d5d8dc; }
+        tfoot td { background: #f4f6f7; font-weight: bold; position: sticky; bottom: 0; border-top: 2px solid #2c3e50; }
+        #sumBody tr { cursor: pointer; }
+        #sumBody tr:hover { background-color: #e8f4f8; }
+        #sumBody tr.selected { background-color: #d5f5e3; }
+        .mat-link { color: #2980b9; font-weight: bold; text-decoration: underline; }
+        tr.mat-band td { background: #f7e6c8; font-weight: bold; border-top: 2px solid #b9a37a; }
+        .tag-b { display: inline-block; min-width: 22px; padding: 0 6px; border-radius: 8px; font-size: 11px; font-weight: bold; color: #fff; text-align: center; }
+        .tag-N { background: #27ae60; } .tag-R { background: #e67e22; } .tag-O { background: #7f8c8d; }
+
+        /* dropdown เลือกหลายที่เก็บ */
+        .dd { position: relative; width: 100%; }
+        .dd .anchor { display: block; width: 100%; padding: 6px 25px 6px 8px; border: 1px solid #ccc; border-radius: 4px; background: white; cursor: pointer; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; height: 32px; box-sizing: border-box; font-size: 13px; position: relative; }
+        .dd .anchor:after { content: '▼'; position: absolute; right: 8px; top: 8px; font-size: 10px; color: #7f8c8d; }
+        .dd .items { display: none; position: absolute; background: white; border: 1px solid #ccc; max-height: 320px; overflow-y: auto; z-index: 99; min-width: 260px; border-radius: 4px; padding: 6px; box-shadow: 0 4px 8px rgba(0,0,0,0.2); left: 0; top: 36px; }
+        .dd.open .items { display: block; }
+        .dd .items .tools { display: flex; gap: 6px; flex-wrap: wrap; padding-bottom: 6px; border-bottom: 1px solid #eee; margin-bottom: 4px; position: sticky; top: -6px; background: #fff; padding-top: 6px; }
+        .dd .items .tools button { border: 1px solid #5c6bc0; background: #fff; color: #3949ab; border-radius: 4px; font-size: 11.5px; cursor: pointer; padding: 3px 8px; font-weight: bold; }
+        .dd .items .tools button:hover { background: #5c6bc0; color: #fff; }
+        .dd .items label { display: flex; align-items: center; gap: 6px; padding: 4px 6px; cursor: pointer; font-size: 12.5px; margin: 0; font-weight: normal; }
+        .dd .items label:hover { background: #e8f4f8; }
+        .dd .items label small { color: #95a5a6; margin-left: auto; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="index.html" class="nav-btn btn-graph">📊 หน้ากราฟ</a>
+        <a href="demand.html" class="nav-btn btn-demand">📋 ตารางความต้องการ</a>
+        <a href="concrete.html" class="nav-btn btn-concrete">🏗️ ผลิตภัณฑ์คอนกรีต</a>
+        <a href="mb52.html" class="nav-btn btn-mb52" style="box-shadow: 0 0 0 2px white;">🏬 คงคลัง MB52</a>
+        <a href="me2n.html" class="nav-btn btn-me2n">📦 วัสดุรอนำเข้า (ME2N)</a>
+        <a href="plan1.html" class="nav-btn btn-plan">🛒 แผนซื้อ กฟฉ.1</a>
+        <a href="allocate.html" class="nav-btn btn-alloc">🚚 จัดสรรให้คลังต่างๆ</a>
+        <a href="budget.html" class="nav-btn btn-budget">💰 งบเงิน</a>
+        <a href="purchase.html" class="nav-btn btn-purchase">🛒 รายการจัดซื้อ</a>
+        <div class="update-box">
+            🕒 อัปเดตล่าสุด: <span id="lastUpdatedText">กำลังอัปเดต...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header-title">🏬 คงคลังพัสดุ MB52 <small>โรงงาน D060 (คลังพัสดุ นครพนม) เท่านั้น</small></div>
+
+        <div class="filter-grid">
+            <div>
+                <label>🏷️ ประเภท</label>
+                <select id="categoryFilter" onchange="render()"><option value="ALL">✅ ทุกประเภท</option></select>
+            </div>
+            <div>
+                <label>📍 ที่เก็บสินค้า</label>
+                <div class="dd" id="locDD">
+                    <span class="anchor" onclick="toggleDD()" id="locAnchor">✅ ทุกที่เก็บ</span>
+                    <div class="items" id="locItems"></div>
+                </div>
+            </div>
+            <div>
+                <label>🔍 รหัสพัสดุ / ชื่อ</label>
+                <input type="text" id="matSearch" oninput="selectedMat = null; render()" placeholder="เช่น 1-00-001-0001 หรือ 1000010001 (คั่นหลายรายการด้วย ,)">
+            </div>
+            <div>
+                <label>🧪 แบทช์</label>
+                <select id="batchFilter" onchange="render()"><option value="ALL">✅ ทั้งหมด</option></select>
+            </div>
+            <div>
+                <label class="chk-line" style="margin:0;"><input type="checkbox" id="hideZero" onchange="render()"> ซ่อนแถวที่ยอดใช้ได้ = 0</label>
+            </div>
+            <div>
+                <button class="btn-reset" onclick="resetFilters()">🔄 ล้างตัวกรอง</button>
+            </div>
+        </div>
+
+        <div class="kpi-row">
+            <div class="kpi"><div class="k-label">📦 รายการวัสดุ</div><div class="k-value" id="kMat">0</div><div class="k-sub">รหัสวัสดุที่มีของคงคลัง</div></div>
+            <div class="kpi green"><div class="k-label">📍 จำนวนที่เก็บสินค้า</div><div class="k-value" id="kLoc">0</div><div class="k-sub">ที่เก็บที่มีของ (ตามตัวกรอง)</div></div>
+            <div class="kpi amber"><div class="k-label">🧾 แถวคงคลัง (ที่เก็บ × แบทช์)</div><div class="k-value" id="kRow">0</div><div class="k-sub">เหมือนบรรทัดในรายงาน MB52</div></div>
+            <div class="kpi red"><div class="k-label">⚠️ วัสดุที่มียอดระงับ / ตรวจสอบคุณภาพ</div><div class="k-value" id="kIssue">0</div><div class="k-sub">รายการที่ไม่ใช่ยอดพร้อมใช้ล้วน</div></div>
+        </div>
+
+        <!-- ตารางที่ 1 -->
+        <div class="sec-head">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <h2>1. สรุปรวมตามวัสดุ (คลิกแถวเพื่อกรองตารางที่ 2)</h2>
+                <span class="sel-chip" id="selChip"></span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-export" onclick="exportSum()">📥 Export Excel (.xlsx)</button>
+                <button class="btn-clear-mat" onclick="selectedMat = null; render()">ล้างการเลือกวัสดุ</button>
+            </div>
+        </div>
+        <div class="table-wrapper" style="max-height: 340px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="min-width:130px;">รหัสวัสดุ</th>
+                        <th style="min-width:260px;">คำอธิบายวัสดุ</th>
+                        <th>หน่วย</th>
+                        <th style="background:#27ae60;">ที่ใช้ได้</th>
+                        <th>จำนวนที่เก็บ</th>
+                        <th>การส่ง/การโอน</th>
+                        <th>ตรวจสอบคุณภาพ</th>
+                        <th>การใช้ที่จำกัด</th>
+                        <th style="background:#c0392b;">ระงับ</th>
+                        <th>ส่งคืน</th>
+                    </tr>
+                </thead>
+                <tbody id="sumBody"></tbody>
+                <tfoot id="sumFoot"></tfoot>
+            </table>
+        </div>
+
+        <!-- ตารางที่ 2 -->
+        <div class="sec-head">
+            <h2>2. รายละเอียดแยกที่เก็บสินค้า / แบทช์ (รูปแบบเดียวกับรายงาน MB52)</h2>
+            <button class="btn-export" onclick="exportDet()">📥 Export Excel (.xlsx)</button>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="min-width:110px;">ที่เก็บส/ค</th>
+                        <th>แบทช์</th>
+                        <th>หน่วย</th>
+                        <th style="background:#27ae60;">ที่ใช้ได้</th>
+                        <th>การส่ง/การโอน</th>
+                        <th>ตรวจสอบคุณภาพ</th>
+                        <th>การใช้ที่จำกัด</th>
+                        <th style="background:#c0392b;">ระงับ</th>
+                        <th>ส่งคืน</th>
+                    </tr>
+                </thead>
+                <tbody id="detBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+<script>
+    // ที่เก็บที่ใช้คำนวณ "สต็อก" ในหน้าตารางความต้องการ (ตรงกับ target_locs ใน run.py)
+    const DEMAND_LOCS = ['0021', '0022', '0023', '0024', '0025', '6001', '6002', '6003', '6004', '6006', '6007', '6008', '6009', '6010', '6011'];
+    const BLANK = '__BLANK__';
+    const BLANK_LABEL = '(ไม่ระบุที่เก็บ / ระหว่างขนส่ง)';
+
+    let selectedMat = null;
+    let exportSumRows = [], exportDetRows = [];
+
+    const fmt = n => (Number(n) || 0).toLocaleString('en-US', { maximumFractionDigits: 3 });
+    const numCell = (v, cls = '') => {
+        v = Number(v) || 0;
+        if (v === 0) return `<td class="num-col zero">0</td>`;
+        return `<td class="num-col ${v < 0 ? 'neg' : ''} ${cls}">${fmt(v)}</td>`;
+    };
+    const locKey = l => l === '' ? BLANK : l;
+    const locLabel = l => l === '' ? BLANK_LABEL : l;
+
+    function init() {
+        if (typeof lastUpdated !== 'undefined') document.getElementById('lastUpdatedText').innerText = lastUpdated;
+        if (typeof mb52Data === 'undefined') {
+            document.getElementById('sumBody').innerHTML = '<tr><td colspan="10" style="text-align:center; color:#e74c3c; padding:20px; font-weight:bold;">⚠️ data.js ยังไม่มีข้อมูล mb52Data — ให้รัน run.py (GitHub Action) ใหม่อีกครั้ง หรือรอสักครู่แล้วกดรีเฟรช (F5)</td></tr>';
+            return;
+        }
+
+        [...new Set(mb52Data.map(r => r.Category))].sort().forEach(c => document.getElementById('categoryFilter').appendChild(new Option(c, c)));
+        [...new Set(mb52Data.map(r => r.Batch))].sort().forEach(b => document.getElementById('batchFilter').appendChild(new Option(b === '' ? '(ไม่มีแบทช์)' : b, b === '' ? BLANK : b)));
+
+        // รายการที่เก็บ + จำนวนวัสดุในแต่ละที่เก็บ
+        const locMats = {};
+        mb52Data.forEach(r => { (locMats[r.Loc] = locMats[r.Loc] || new Set()).add(r.Mat); });
+        const locs = Object.keys(locMats).sort((a, b) => (a === '') - (b === '') || a.localeCompare(b));
+        document.getElementById('locItems').innerHTML = `<div class="tools">
+                <button onclick="locPreset('all')">เลือกทั้งหมด</button>
+                <button onclick="locPreset('none')">ล้าง</button>
+                <button onclick="locPreset('demand')" title="ที่เก็บที่ใช้คำนวณสต็อกในหน้าตารางความต้องการ">เฉพาะคลังที่ใช้คำนวณความต้องการ</button>
+            </div>` + locs.map(l => `<label><input type="checkbox" class="chk-loc" value="${locKey(l)}" onchange="locChanged()"> ${locLabel(l)}${DEMAND_LOCS.includes(l) ? ' ★' : ''}<small>${locMats[l].size} รายการ</small></label>`).join('');
+
+        render();
+    }
+
+    // ---------- ที่เก็บสินค้า (เลือกได้หลายที่) ----------
+    function toggleDD() { document.getElementById('locDD').classList.toggle('open'); }
+    window.addEventListener('click', e => { if (!e.target.closest('#locDD')) document.getElementById('locDD').classList.remove('open'); });
+    function selectedLocs() { return Array.from(document.querySelectorAll('.chk-loc:checked')).map(c => c.value); }
+    function locChanged() {
+        const sel = selectedLocs();
+        const a = document.getElementById('locAnchor');
+        if (!sel.length) a.innerHTML = '✅ ทุกที่เก็บ';
+        else if (sel.length === 1) a.innerText = sel[0] === BLANK ? BLANK_LABEL : sel[0];
+        else a.innerHTML = `📌 เลือกแล้ว ${sel.length} ที่เก็บ`;
+        selectedMat = null;
+        render();
+    }
+    function locPreset(kind) {
+        document.querySelectorAll('.chk-loc').forEach(c => { c.checked = kind === 'all' ? true : (kind === 'demand' ? DEMAND_LOCS.includes(c.value) : false); });
+        locChanged();
+    }
+
+    function resetFilters() {
+        document.getElementById('categoryFilter').value = 'ALL';
+        document.getElementById('batchFilter').value = 'ALL';
+        document.getElementById('matSearch').value = '';
+        document.getElementById('hideZero').checked = false;
+        document.querySelectorAll('.chk-loc').forEach(c => c.checked = false);
+        locChanged();
+    }
+
+    // ---------- กรองข้อมูล ----------
+    function filteredRows() {
+        const cat = document.getElementById('categoryFilter').value;
+        const batch = document.getElementById('batchFilter').value;
+        const locs = new Set(selectedLocs());
+        const hideZero = document.getElementById('hideZero').checked;
+        // ค้นหารหัส: พิมพ์มีหรือไม่มี - ก็ได้ / คั่นหลายรายการด้วย , ; หรือขึ้นบรรทัดใหม่
+        const terms = (document.getElementById('matSearch').value || '').split(/[,;\n]/).map(t => t.trim().toUpperCase()).filter(Boolean)
+            .map(t => ({ raw: t, code: t.replace(/[\s-]/g, '') })).filter(t => t.code);
+
+        return mb52Data.filter(r => {
+            if (cat !== 'ALL' && r.Category !== cat) return false;
+            if (batch !== 'ALL' && locKey(r.Batch) !== batch) return false;
+            if (locs.size && !locs.has(locKey(r.Loc))) return false;
+            if (hideZero && !r.Qty) return false;
+            if (terms.length) {
+                const code = r.Mat.toUpperCase().replace(/[\s-]/g, '');
+                const desc = r.Desc.toUpperCase();
+                if (!terms.some(t => code.includes(t.code) || desc.includes(t.raw))) return false;
+            }
+            return true;
+        });
+    }
+
+    function render() {
+        if (typeof mb52Data === 'undefined') return;
+        const rows = filteredRows();
+
+        // ----- สรุปตามวัสดุ -----
+        const sum = {};
+        rows.forEach(r => {
+            const s = sum[r.Mat] = sum[r.Mat] || { mat: r.Mat, desc: r.Desc, unit: r.Unit, qty: 0, locs: new Set(), transit: 0, qi: 0, restr: 0, blocked: 0, ret: 0 };
+            s.qty += r.Qty; s.transit += r.Transit; s.qi += r.QI; s.restr += r.Restr; s.blocked += r.Blocked; s.ret += r.Return;
+            if (r.Loc !== '') s.locs.add(r.Loc);
+        });
+        if (selectedMat && !sum[selectedMat]) selectedMat = null;
+        const mats = Object.values(sum).sort((a, b) => a.mat.localeCompare(b.mat));
+
+        // KPI
+        document.getElementById('kMat').innerText = fmt(mats.length);
+        document.getElementById('kLoc').innerText = fmt(new Set(rows.filter(r => r.Loc !== '').map(r => r.Loc)).size);
+        document.getElementById('kRow').innerText = fmt(rows.length);
+        document.getElementById('kIssue').innerText = fmt(mats.filter(m => m.blocked || m.qi || m.restr).length);
+
+        // ตารางที่ 1
+        let h1 = '';
+        const tot = { transit: 0, qi: 0, restr: 0, blocked: 0, ret: 0 };
+        mats.forEach(m => {
+            tot.transit += m.transit; tot.qi += m.qi; tot.restr += m.restr; tot.blocked += m.blocked; tot.ret += m.ret;
+            h1 += `<tr class="${selectedMat === m.mat ? 'selected' : ''}" onclick="selectMat('${m.mat}')">
+                <td class="ctr"><span class="mat-link">${m.mat}</span></td>
+                <td>${m.desc}</td>
+                <td class="ctr">${m.unit}</td>
+                ${numCell(m.qty, 'g')}
+                <td class="ctr">${m.locs.size}</td>
+                ${numCell(m.transit)}${numCell(m.qi)}${numCell(m.restr)}${numCell(m.blocked)}${numCell(m.ret)}
+            </tr>`;
+        });
+        document.getElementById('sumBody').innerHTML = h1 || '<tr><td colspan="10" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
+        document.getElementById('sumFoot').innerHTML = mats.length ? `<tr><td colspan="3" style="text-align:right;">รวม ${mats.length} รายการวัสดุ (ยอดรวมไม่แสดงเพราะหน่วยนับต่างกัน)</td><td></td><td></td>
+            <td class="num-col">${fmt(tot.transit)}</td><td class="num-col">${fmt(tot.qi)}</td><td class="num-col">${fmt(tot.restr)}</td><td class="num-col">${fmt(tot.blocked)}</td><td class="num-col">${fmt(tot.ret)}</td></tr>` : '';
+        exportSumRows = mats.map(m => [m.mat, m.desc, m.unit, m.qty, m.locs.size, m.transit, m.qi, m.restr, m.blocked, m.ret]);
+
+        const chip = document.getElementById('selChip');
+        if (selectedMat) { chip.style.display = 'inline-block'; chip.innerText = '🔎 กำลังกรองวัสดุ: ' + selectedMat; } else chip.style.display = 'none';
+
+        // ----- ตารางที่ 2 : แยกที่เก็บ/แบทช์ (จัดกลุ่มตามวัสดุแบบรายงาน SAP) -----
+        let det = rows;
+        if (selectedMat) det = det.filter(r => r.Mat === selectedMat);
+        const byMat = {};
+        det.forEach(r => { (byMat[r.Mat] = byMat[r.Mat] || []).push(r); });
+
+        let h2 = '';
+        exportDetRows = [];
+        Object.keys(byMat).sort().forEach(mat => {
+            const g = byMat[mat].slice().sort((a, b) => (a.Loc === '') - (b.Loc === '') || a.Loc.localeCompare(b.Loc) || a.Batch.localeCompare(b.Batch));
+            const total = g.reduce((s, r) => s + r.Qty, 0);
+            h2 += `<tr class="mat-band"><td colspan="3">${mat} &nbsp; ${g[0].Desc}</td><td class="num-col">${fmt(total)}</td><td colspan="5" style="font-weight:normal; color:#7f8c8d;">D060 คลังพัสดุ นครพนม | ${g[0].Category}</td></tr>`;
+            g.forEach(r => {
+                const bt = r.Batch === '' ? '-' : `<span class="tag-b tag-${r.Batch === 'N' || r.Batch === 'R' ? r.Batch : 'O'}">${r.Batch}</span>`;
+                h2 += `<tr><td class="ctr">${r.Loc === '' ? '<span style="color:#95a5a6;">(ว่าง)</span>' : r.Loc}</td><td class="ctr">${bt}</td><td class="ctr">${r.Unit}</td>
+                    ${numCell(r.Qty, 'g')}${numCell(r.Transit)}${numCell(r.QI)}${numCell(r.Restr)}${numCell(r.Blocked)}${numCell(r.Return)}</tr>`;
+                exportDetRows.push([r.Mat, r.Desc, r.Category, r.Loc === '' ? '(ไม่ระบุที่เก็บ)' : r.Loc, r.Batch, r.Unit, r.Qty, r.Transit, r.QI, r.Restr, r.Blocked, r.Return]);
+            });
+        });
+        document.getElementById('detBody').innerHTML = h2 || '<tr><td colspan="9" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
+    }
+
+    function selectMat(m) { selectedMat = (selectedMat === m) ? null : m; render(); }
+
+    // ---------- Export Excel ----------
+    function filterInfo() {
+        const sel = id => { const e = document.getElementById(id); return e.value === 'ALL' ? 'ทั้งหมด' : e.options[e.selectedIndex].text; };
+        const locs = selectedLocs().map(l => l === BLANK ? BLANK_LABEL : l);
+        const q = document.getElementById('matSearch').value.trim();
+        return 'โรงงาน D060 | ประเภท: ' + sel('categoryFilter') + ' | ที่เก็บ: ' + (locs.length ? locs.join(', ') : 'ทั้งหมด') + ' | แบทช์: ' + sel('batchFilter')
+            + (q ? ' | ค้นหา: ' + q : '') + (document.getElementById('hideZero').checked ? ' | ซ่อนยอดใช้ได้=0' : '');
+    }
+    function saveAoa(aoa, widths, sheet, prefix) {
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = widths.map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, sheet);
+        XLSX.writeFile(wb, prefix + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    }
+    function exportSum() {
+        saveAoa([
+            ['คงคลัง MB52 : สรุปรวมตามวัสดุ (ตารางที่ 1)'],
+            [filterInfo(), '', '', '', '', '', '', '', '', 'อัปเดตข้อมูล: ' + (typeof lastUpdated !== 'undefined' ? lastUpdated : '-')],
+            [],
+            ['รหัสวัสดุ', 'คำอธิบายวัสดุ', 'หน่วย', 'ที่ใช้ได้', 'จำนวนที่เก็บ', 'การส่ง/การโอน', 'ตรวจสอบคุณภาพ', 'การใช้ที่จำกัด', 'ระงับ', 'ส่งคืน'],
+            ...exportSumRows
+        ], [18, 48, 8, 14, 12, 14, 16, 14, 12, 12], 'สรุปตามวัสดุ', 'MB52_Summary');
+    }
+    function exportDet() {
+        saveAoa([
+            ['คงคลัง MB52 : รายละเอียดแยกที่เก็บ/แบทช์ (ตารางที่ 2)' + (selectedMat ? ' | วัสดุ: ' + selectedMat : '')],
+            [filterInfo(), '', '', '', '', '', '', '', '', '', '', 'อัปเดตข้อมูล: ' + (typeof lastUpdated !== 'undefined' ? lastUpdated : '-')],
+            [],
+            ['รหัสวัสดุ', 'คำอธิบายวัสดุ', 'ประเภท', 'ที่เก็บสินค้า', 'แบทช์', 'หน่วย', 'ที่ใช้ได้', 'การส่ง/การโอน', 'ตรวจสอบคุณภาพ', 'การใช้ที่จำกัด', 'ระงับ', 'ส่งคืน'],
+            ...exportDetRows
+        ], [18, 48, 18, 16, 8, 8, 12, 14, 16, 14, 10, 10], 'รายละเอียด', 'MB52_Detail');
+    }
+
+    window.addEventListener('load', init);
+</script>
+</body>
+</html>

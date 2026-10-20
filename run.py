@@ -274,6 +274,30 @@ concrete_stock = pd.merge(concrete_stock, mat_desc, on='วัสดุ', how='l
 concrete_stock.rename(columns={'คำอธิบายวัสดุ': 'MatDesc', 'แบทช์': 'Batch', 'ที่เก็บสินค้า': 'Loc', 'ที่ใช้ได้': 'Qty'}, inplace=True)
 concrete_stock_data = concrete_stock[['วัสดุ', 'MatDesc', 'Batch', 'Loc', 'Qty']].to_dict(orient='records')
 
+# ===== ข้อมูล MB52 ทั้งหมดของ D060 (ทุกที่เก็บ/แบทช์) สำหรับหน้า mb52.html =====
+df_mb = read_sap_txt(file_mb52)
+df_mb.rename(columns={'Plnt': 'โรงงาน', 'SLoc': 'ที่เก็บสินค้า', 'BUn': 'หน่วย'}, inplace=True)
+mb_num_cols = ['ที่ใช้ได้', 'การส่ง/การโอน', 'ในการตรวจสอบคุณภาพ', 'การใช้ที่จำกัด', 'ระงับ', 'ส่งคืน']
+df_mb = ensure_cols(df_mb, ['วัสดุ', 'คำอธิบายวัสดุ', 'โรงงาน', 'ที่เก็บสินค้า', 'แบทช์', 'หน่วย'], '')
+df_mb = ensure_cols(df_mb, mb_num_cols, 0)
+df_mb = df_mb[df_mb['โรงงาน'] == 'D060'].copy()
+for c in mb_num_cols:
+    df_mb[c] = df_mb[c].apply(parse_sap_num)
+df_mb = df_mb[(df_mb[mb_num_cols] != 0).any(axis=1)]
+
+def _clean_num(v):
+    return int(v) if float(v).is_integer() else round(float(v), 3)
+
+mb52_data = []
+for r in df_mb.to_dict(orient='records'):
+    mat_code = str(r['วัสดุ']).strip()
+    mb52_data.append({
+        'Mat': mat_code, 'Desc': str(r['คำอธิบายวัสดุ']).strip(), 'Loc': str(r['ที่เก็บสินค้า']).strip(),
+        'Batch': str(r['แบทช์']).strip(), 'Unit': str(r['หน่วย']).strip(), 'Category': get_category(mat_code),
+        'Qty': _clean_num(r['ที่ใช้ได้']), 'Transit': _clean_num(r['การส่ง/การโอน']), 'QI': _clean_num(r['ในการตรวจสอบคุณภาพ']),
+        'Restr': _clean_num(r['การใช้ที่จำกัด']), 'Blocked': _clean_num(r['ระงับ']), 'Return': _clean_num(r['ส่งคืน'])
+    })
+
 df_proj['Status_Short'] = df_proj['สถานะ'].apply(get_short_status)
 wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง']], df_proj[['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร']], on='องค์ประกอบ WBS', how='left')
 wbs_details = pd.merge(wbs_details, df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount'), on='องค์ประกอบ WBS', how='left').fillna(0)
@@ -455,6 +479,7 @@ const allocPlants = {json.dumps(alloc_plants)};
 const budgetData = {json.dumps(budget_data)};
 const purchaseData = {json.dumps(purchase_data)};
 const concreteStockData = {json.dumps(concrete_stock_data)};
+const mb52Data = {json.dumps(mb52_data)};
 """
 
 with open('data.js', 'w', encoding='utf-8') as f: f.write(js_content)
