@@ -4,18 +4,18 @@ import os
 import re
 from datetime import datetime, timezone, timedelta
 
-file_mb52 = '6.mb52.txt'       
-file_zmb25 = '11.zmb25.txt'      
-file_cn43n = '14.CN43N.txt'     
-file_me2n = '12.ME2N.txt'       
-file_me2n1 = '13.ME2N1.txt'     
-file_budget_c = 'C.txt' 
+file_mb52 = '6.mb52.txt'
+file_zmb25 = '11.zmb25.txt'
+file_cn43n = '14.CN43N.txt'
+file_me2n = '12.ME2N.txt'
+file_me2n1 = '13.ME2N1.txt'
+file_budget_c = 'C.txt'
 file_budget_i = 'I.txt'
 file_budget_p = 'P.txt'
 file_budget_n = 'N.txt'
 file_z005 = 'z005.txt'
 file_n_z005 = 'n-z005.txt'
-file_z048 = 'z048.txt' 
+file_z048 = 'z048.txt'
 
 print("กำลังอ่านไฟล์ TXT ทั้งหมด...")
 
@@ -28,7 +28,6 @@ def read_sap_txt(filepath):
         try:
             with open(filepath, 'r', encoding='cp874') as f: lines = f.readlines()
         except: return pd.DataFrame()
-            
     for line in lines:
         if line.startswith('|'):
             parts = [p.strip() for p in line.split('|')[1:-1]]
@@ -50,7 +49,7 @@ def read_sap_txt(filepath):
                             if len(new_parts) == len(headers): data.append(new_parts)
     if headers and data:
         df = pd.DataFrame(data, columns=headers)
-        # เพิ่มบรรทัดนี้: ลบคอลัมน์ที่ชื่อซ้ำกัน (เช่น คอลัมน์ว่าง) ป้องกัน Error
+        # ลบคอลัมน์ที่ชื่อซ้ำกัน (เช่น คอลัมน์ว่าง) ป้องกัน Error
         df = df.loc[:, ~df.columns.duplicated()]
         return df
     return pd.DataFrame()
@@ -86,13 +85,12 @@ df_z048 = ensure_cols(df_z048, ['WBS', 'Network', 'Pln.ค่าแรง', 'Pln
 if not df_z048.empty:
     df_z048['Network'] = df_z048['Network'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
     df_z048['WBS'] = df_z048['WBS'].astype(str).str.strip()
-    
     for col in ['Pln.ค่าแรง', 'Pln.ค่าควบคุมงาน', 'Pln.ค่าขนส่ง', 'Pln.ค่าเบ็ดเตล็ด', 'Act.ค่าแรง', 'Act.ค่าควบคุมงาน', 'Act.ค่าขนส่ง', 'Act.ค่าเบ็ดเตล็ด']:
         df_z048[col] = df_z048[col].apply(parse_sap_num)
-        
+
     df_z048['Pln.Total'] = df_z048['Pln.ค่าแรง'] + df_z048['Pln.ค่าควบคุมงาน'] + df_z048['Pln.ค่าขนส่ง'] + df_z048['Pln.ค่าเบ็ดเตล็ด']
     df_z048['Act.Total'] = df_z048['Act.ค่าแรง'] + df_z048['Act.ค่าควบคุมงาน'] + df_z048['Act.ค่าขนส่ง'] + df_z048['Act.ค่าเบ็ดเตล็ด']
-    
+
     # เพิ่มการรวม Pln ย่อยด้วย
     cost_by_wbs = df_z048[df_z048['Network'] != ''].groupby('WBS').agg({
         'Pln.Total': 'sum',
@@ -110,6 +108,7 @@ else:
     cost_by_wbs = pd.DataFrame(columns=['WBS', 'Pln.Total', 'Act.Total', 'Pln.ค่าแรง', 'Pln.ค่าควบคุมงาน', 'Pln.ค่าขนส่ง', 'Pln.ค่าเบ็ดเตล็ด', 'Act.ค่าแรง', 'Act.ค่าควบคุมงาน', 'Act.ค่าขนส่ง', 'Act.ค่าเบ็ดเตล็ด'])
 
 renames_me2n = {'รง.': 'โรงงาน', 'ผู้ขาย/โรงงานจัดหา': 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'SLoc': 'ที่เก็บสินค้า', 'เอกสารซื้อ': 'เอกสารการจัดซื้อ', 'To be del.': 'ยังจะถูกส่งมอบ (ปริมาณ)', 'PGr': 'กลุ่มการจัดซื้อ', 'วันส่งมอบ': 'วันที่ส่งมอบ'}
+
 df_me2n = read_sap_txt(file_me2n)
 df_me2n.rename(columns=renames_me2n, inplace=True)
 df_me2n = ensure_cols(df_me2n, ['โรงงาน', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'เอกสารการจัดซื้อ', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'กลุ่มการจัดซื้อ', 'วันที่ส่งมอบ', 'วัสดุ', 'ข้อความสั้น', 'ข้อความส่วนหัว'])
@@ -119,7 +118,9 @@ df_me2n1.rename(columns=renames_me2n, inplace=True)
 df_me2n1 = ensure_cols(df_me2n1, ['โรงงาน', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'เอกสารการจัดซื้อ', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'กลุ่มการจัดซื้อ', 'วันที่ส่งมอบ', 'วัสดุ', 'ข้อความสั้น', 'ข้อความส่วนหัว'])
 
 cat_map = {'1-00-001': 'ผลิตภัณฑ์คอนกรีต', '1-00-011': 'ผลิตภัณฑ์คอนกรีต', '1-00-004': 'ผลิตภัณฑ์คอนกรีต', '1-00-021': 'ผลิตภัณฑ์คอนกรีต', '1-02-001': 'สายไฟ', '1-02-002': 'สายไฟ', '1-02-005': 'สายไฟ', '1-02-007': 'สายไฟ', '1-02-008': 'สายไฟ', '1-03-000': 'ลูกถ้วย', '1-04-000': 'แก้ไฟ', '1-05-000': 'หม้อแปลง', '1-05-001': 'หม้อแปลง'}
+
 def get_category(mat_code): return cat_map.get(str(mat_code)[:8], 'วัสดุอื่นๆ')
+
 def get_short_status(x):
     if pd.isna(x) or str(x) == '-': return "-"
     parts = str(x).replace('//', '').strip().split()
@@ -135,7 +136,7 @@ def get_project_group(wbs):
     elif wbs.startswith('I-68'): return 'ลงทุน 68'
     elif wbs.startswith('I-69'): return 'ลงทุน 69'
     elif wbs.startswith('P-NHE03'): return 'คฟม'
-    elif wbs.startswith('P-SEZ02'): return 'คพพ' 
+    elif wbs.startswith('P-SEZ02'): return 'คพพ'
     elif wbs.startswith('P-TDD01'): return 'คพจ1'
     elif wbs.startswith('P-TDD02'): return 'คพจ2'
     return 'อื่นๆ'
@@ -156,10 +157,10 @@ def get_team(name):
 
 target_locs = ['0021', '0022', '0023', '0024', '0025', '6001', '6002', '6003', '6004', '6006', '6007', '6008', '6009', '6010', '6011']
 df_stock['ที่เก็บสินค้า'] = df_stock['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].str.zfill(4)
+
 stock_summary = df_stock[(df_stock['โรงงาน'] == 'D060') & (df_stock['ที่เก็บสินค้า'].isin(target_locs))].groupby('วัสดุ')['ที่ใช้ได้'].sum().reset_index().rename(columns={'ที่ใช้ได้': 'Stock'})
 
 df_demand_pending = df_demand[df_demand['ปริมาณผลต่าง'] > 0].copy()
-
 if not df_demand_pending.empty:
     wbs_summary_grp = df_demand_pending.groupby('องค์ประกอบ WBS').agg({'โครงข่าย': 'first', 'วัสดุ': 'nunique', 'ปริมาณผลต่าง': 'sum'}).reset_index().rename(columns={'วัสดุ': 'PendingItems', 'ปริมาณผลต่าง': 'PendingQtySum'})
 else:
@@ -181,12 +182,12 @@ wbs_summary_df = pd.merge(wbs_summary_df, cost_by_wbs, on='WBS', how='left').fil
 def format_cost(row):
     act = float(row.get('Act.Total', 0))
     pln = float(row.get('Pln.Total', 0))
-    
+
     p_labor = float(row.get('Pln.ค่าแรง', 0))
     p_control = float(row.get('Pln.ค่าควบคุมงาน', 0))
     p_transport = float(row.get('Pln.ค่าขนส่ง', 0))
     p_misc = float(row.get('Pln.ค่าเบ็ดเตล็ด', 0))
-    
+
     a_labor = float(row.get('Act.ค่าแรง', 0))
     a_control = float(row.get('Act.ค่าควบคุมงาน', 0))
     a_transport = float(row.get('Act.ค่าขนส่ง', 0))
@@ -232,7 +233,7 @@ for _, r in wbs_summary_df.iterrows():
         'Branch': str(r['Branch']),
         'Supervisor': str(r['Supervisor']),
         'Team': str(r['Team']),
-        'CostData': str(r['CostData']) 
+        'CostData': str(r['CostData'])
     })
 
 mat_desc_demand = df_demand[['วัสดุ', 'คำอธิบายวัสดุ']].copy()
@@ -249,6 +250,7 @@ demand_details_data = demand_details[['WBS', 'วัสดุ', 'MatDesc', 'Qty'
 
 df_demand['Project_Group'] = df_demand['องค์ประกอบ WBS'].apply(get_project_group)
 pie_summary = df_demand.groupby('Project_Group')['องค์ประกอบ WBS'].nunique().reset_index().rename(columns={'องค์ประกอบ WBS': 'WBS_Count'})
+
 pivot_demand = df_demand.pivot_table(index='วัสดุ', columns='Project_Group', values='ปริมาณผลต่าง', aggfunc='sum', fill_value=0).reset_index()
 project_cols = [col for col in pivot_demand.columns if col != 'วัสดุ']
 if project_cols: pivot_demand['Total_Demand'] = pivot_demand[project_cols].sum(axis=1)
@@ -274,13 +276,14 @@ concrete_stock = pd.merge(concrete_stock, mat_desc, on='วัสดุ', how='l
 concrete_stock.rename(columns={'คำอธิบายวัสดุ': 'MatDesc', 'แบทช์': 'Batch', 'ที่เก็บสินค้า': 'Loc', 'ที่ใช้ได้': 'Qty'}, inplace=True)
 concrete_stock_data = concrete_stock[['วัสดุ', 'MatDesc', 'Batch', 'Loc', 'Qty']].to_dict(orient='records')
 
-# ===== ข้อมูล MB52 ทั้งหมดของ D060 (ทุกที่เก็บ/แบทช์) สำหรับหน้า mb52.html =====
+# ===== ข้อมูล MB52 ทุกโรงงาน (ทุกที่เก็บ/แบทช์) สำหรับหน้า mb52.html =====
+# หน้า mb52.html เลือกโรงงานเองได้ (ค่าเริ่มต้น D060) จึงต้องส่งข้อมูลทุกโรงงาน พร้อมฟิลด์ Plant
 df_mb = read_sap_txt(file_mb52)
 df_mb.rename(columns={'Plnt': 'โรงงาน', 'SLoc': 'ที่เก็บสินค้า', 'BUn': 'หน่วย'}, inplace=True)
 mb_num_cols = ['ที่ใช้ได้', 'การส่ง/การโอน', 'ในการตรวจสอบคุณภาพ', 'การใช้ที่จำกัด', 'ระงับ', 'ส่งคืน']
 df_mb = ensure_cols(df_mb, ['วัสดุ', 'คำอธิบายวัสดุ', 'โรงงาน', 'ที่เก็บสินค้า', 'แบทช์', 'หน่วย'], '')
 df_mb = ensure_cols(df_mb, mb_num_cols, 0)
-df_mb = df_mb[df_mb['โรงงาน'] == 'D060'].copy()
+df_mb = df_mb[df_mb['โรงงาน'].astype(str).str.strip() != ''].copy()
 for c in mb_num_cols:
     df_mb[c] = df_mb[c].apply(parse_sap_num)
 df_mb = df_mb[(df_mb[mb_num_cols] != 0).any(axis=1)]
@@ -292,14 +295,14 @@ mb52_data = []
 for r in df_mb.to_dict(orient='records'):
     mat_code = str(r['วัสดุ']).strip()
     mb52_data.append({
-        'Mat': mat_code, 'Desc': str(r['คำอธิบายวัสดุ']).strip(), 'Loc': str(r['ที่เก็บสินค้า']).strip(),
+        'Mat': mat_code, 'Plant': str(r['โรงงาน']).strip(), 'Desc': str(r['คำอธิบายวัสดุ']).strip(), 'Loc': str(r['ที่เก็บสินค้า']).strip(),
         'Batch': str(r['แบทช์']).strip(), 'Unit': str(r['หน่วย']).strip(), 'Category': get_category(mat_code),
         'Qty': _clean_num(r['ที่ใช้ได้']), 'Transit': _clean_num(r['การส่ง/การโอน']), 'QI': _clean_num(r['ในการตรวจสอบคุณภาพ']),
         'Restr': _clean_num(r['การใช้ที่จำกัด']), 'Blocked': _clean_num(r['ระงับ']), 'Return': _clean_num(r['ส่งคืน'])
     })
 
 # ===== ค่า Safety Stock (ST.txt) สำหรับหน้า repair.html (งานแก้ไฟ) =====
-# รูปแบบไฟล์: รหัส | คำอธิบาย | กฟจ | กฟส | กฟย   (J = กฟจ, S = กฟส, Y = กฟย)
+# รูปแบบไฟล์: รหัส | คำอธิบาย | กฟจ | กฟส | กฟย (J = กฟจ, S = กฟส, Y = กฟย)
 st_data = []
 try:
     with open('ST.txt', 'rb') as _f:
@@ -336,6 +339,7 @@ if not df_me2n_in.empty:
     df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'] = df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'].apply(parse_sap_num)
     df_me2n_in['ที่เก็บสินค้า'] = df_me2n_in['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
     df_me2n_in['Category'] = df_me2n_in['วัสดุ'].apply(get_category)
+
 me2n_active = df_me2n_in[df_me2n_in['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy() if not df_me2n_in.empty else pd.DataFrame()
 me2n_summary = me2n_active.groupby(['วัสดุ', 'ข้อความสั้น', 'Category'])['ยังจะถูกส่งมอบ (ปริมาณ)'].sum().reset_index() if not me2n_active.empty else pd.DataFrame()
 me2n_details = me2n_active[['เอกสารการจัดซื้อ', 'ผู้ขาย/โรงงานผู้จัดหาวัสดุ', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']] if not me2n_active.empty else pd.DataFrame()
@@ -346,8 +350,9 @@ if not df_me2n_out.empty:
     df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] = df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'].apply(parse_sap_num)
     df_me2n_out['ที่เก็บสินค้า'] = df_me2n_out['ที่เก็บสินค้า'].astype(str).str.split('.').str[0].apply(lambda x: x.zfill(4) if x.isdigit() else '-')
     df_me2n_out['Category'] = df_me2n_out['วัสดุ'].apply(get_category)
-    plant_map = {'D010': 'D010 คลังพัสดุ อุดรธานี', 'D020': 'D020 คลังพัสดุ หนองคาย', 'D030': 'D030 คลังพัสดุ หนองบัวลำภู', 'D040': 'D040 คลังพัสดุ เลย', 'D050': 'D050 คลังพัสดุ สกลนคร', 'D060': 'D060 คลังพัสดุ นครพนม', 'D070': 'D070 คลังพัสดุ บึงกาฬ', 'D090': 'D090 คลังพัสดุ หนองหาน', 'D100': 'D100 คลังพัสดุ พังโคน', 'D110': 'D110 คลังพัสดุ หนองบัวลำภู', 'D120': 'D120 คลังพัสดุ บ้านไผ่', 'D130': 'D130 คลังพัสดุ บึงกาฬ'}
+    plant_map = {'D010': 'D010 คลังพัสดุ อุดรธานี', 'D020': 'D020 คลังพัสดุ หนองคาย', 'D030': 'D030 คลังพัสดุ ขอนแก่น', 'D040': 'D040 คลังพัสดุ เลย', 'D050': 'D050 คลังพัสดุ สกลนคร', 'D060': 'D060 คลังพัสดุ นครพนม', 'D070': 'D070 คลังพัสดุ ชุมแพ', 'D090': 'D090 คลังพัสดุ หนองหาน', 'D100': 'D100 คลังพัสดุ พังโคน', 'D110': 'D110 คลังพัสดุ หนองบัวลำภู', 'D120': 'D120 คลังพัสดุ บ้านไผ่', 'D130': 'D130 คลังพัสดุ บึงกาฬ'}
     df_me2n_out['โรงงาน'] = df_me2n_out['โรงงาน'].apply(lambda x: plant_map.get(str(x).strip(), str(x).strip())).fillna('-ไม่ระบุ-')
+
 alloc_active = df_me2n_out[df_me2n_out['ยังจะถูกส่งมอบ (ปริมาณ)'] > 0].copy() if not df_me2n_out.empty else pd.DataFrame()
 alloc_details = alloc_active[['เอกสารการจัดซื้อ', 'โรงงาน', 'ที่เก็บสินค้า', 'วัสดุ', 'ข้อความสั้น', 'ยังจะถูกส่งมอบ (ปริมาณ)', 'ข้อความส่วนหัว', 'Category']] if not alloc_active.empty else pd.DataFrame()
 alloc_plants = sorted([str(v) for v in alloc_active['โรงงาน'].unique() if str(v) != '-ไม่ระบุ-']) if not alloc_active.empty else []
@@ -405,19 +410,22 @@ def process_budget_file(file_path, file_type):
                 if len(parts) >= 14:
                     wbs = parts[3].strip()
                     if not wbs: continue
+
                     def get_val(idx):
                         try: return float(parts[idx].strip().replace(',', ''))
                         except: return 0.0
+
                     col_remain_11 = get_val(14)
                     show = False
                     if 'NPN' in wbs: show = True
                     elif file_type == 'C' and ('AED' in wbs or 'POP' in wbs): show = True
+
                     if col_remain_11 > 0 and show:
                         budget_data.append({
                             'WBS': wbs, 'Project_Name': wbs_names_map.get(wbs, '-'),
-                            'Col3': get_val(6), 'Col4': get_val(7), 'Col5': get_val(8), 'Col6': get_val(9),   
-                            'Col7': get_val(10), 'Col8': get_val(11), 'Col9': get_val(12), 'Col10': get_val(13), 
-                            'Col11': col_remain_11 
+                            'Col3': get_val(6), 'Col4': get_val(7), 'Col5': get_val(8), 'Col6': get_val(9),
+                            'Col7': get_val(10), 'Col8': get_val(11), 'Col9': get_val(12), 'Col10': get_val(13),
+                            'Col11': col_remain_11
                         })
     except: pass
 
@@ -440,6 +448,7 @@ for line in lines:
         if len(parts) >= 2: vendor_map[parts[0].strip()] = parts[1].strip()
 
 current_date = datetime.now(timezone(timedelta(hours=7))).replace(tzinfo=None, hour=0, minute=0, second=0, microsecond=0)  # วันที่ปัจจุบัน (เวลาไทย) ใช้คำนวณวันเลยกำหนดส่งมอบ PO
+
 try:
     with open(file_z005, 'r', encoding='utf-8') as f: lines = f.readlines()
 except:
@@ -453,14 +462,13 @@ for line in lines:
         if len(parts) >= 21:
             wbs = parts[3].strip(); mat = parts[5].strip(); desc = parts[6].strip()
             pr_num = parts[7].strip(); po_num = parts[8].strip(); contract_no = parts[9].strip(); gr_ir = parts[10].strip()
-            
             pr_qty = parse_sap_num(parts[13])
             pr_price = parse_sap_num(parts[14])
             po_date_str = parts[15].strip()
             po_qty = parse_sap_num(parts[16])
             po_price = parse_sap_num(parts[17])
             vendor = parts[20].strip()
-            
+
             if gr_ir == '':
                 has_po = len(po_num) > 0
                 doc_num = po_num if has_po else pr_num
@@ -469,14 +477,15 @@ for line in lines:
                 price = po_price if has_po and po_price > 0 else pr_price
                 amount = qty * price
                 company_name = vendor_map.get(vendor, vendor) if vendor else '-'
+
                 due_date_str = '-'; overdue_days = '-'
-                
                 if doc_type == 'PO':
                     due_info = me2n1_due_dates.get(f"{doc_num}_{mat}", me2n1_due_dates.get(doc_num))
                     if due_info:
                         due_date_str, due_date_obj = due_info
                         diff = (current_date - due_date_obj).days
                         overdue_days = diff if diff > 0 else 0
+
                 purchase_data.append({
                     'WBS': wbs, 'Company': company_name, 'DocNum': doc_num, 'DocType': doc_type, 'Mat': mat,
                     'Desc': desc, 'Qty': qty, 'Amount': amount, 'PoDate': po_date_str if po_date_str else '-',
