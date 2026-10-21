@@ -298,6 +298,31 @@ for r in df_mb.to_dict(orient='records'):
         'Restr': _clean_num(r['การใช้ที่จำกัด']), 'Blocked': _clean_num(r['ระงับ']), 'Return': _clean_num(r['ส่งคืน'])
     })
 
+# ===== ค่า Safety Stock (ST.txt) สำหรับหน้า repair.html (งานแก้ไฟ) =====
+# รูปแบบไฟล์: รหัส | คำอธิบาย | กฟจ | กฟส | กฟย   (J = กฟจ, S = กฟส, Y = กฟย)
+st_data = []
+try:
+    with open('ST.txt', 'rb') as _f:
+        _raw_st = _f.read()
+    try:
+        _txt_st = _raw_st.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        _txt_st = _raw_st.decode('cp874', errors='replace')
+
+    def _st_int(x):
+        try:
+            return int(float(str(x).replace(',', '').strip() or 0))
+        except ValueError:
+            return 0
+
+    for _line in _txt_st.splitlines()[1:]:
+        _p = [x.strip().strip('"').strip() for x in _line.split('|')]
+        if len(_p) < 5 or not _p[0]:
+            continue
+        st_data.append({'Mat': _p[0], 'Desc': _p[1], 'J': _st_int(_p[2]), 'S': _st_int(_p[3]), 'Y': _st_int(_p[4])})
+except FileNotFoundError:
+    print('ไม่พบไฟล์ ST.txt (หน้างานแก้ไฟจะยังไม่มีข้อมูล Safety)')
+
 df_proj['Status_Short'] = df_proj['สถานะ'].apply(get_short_status)
 wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง']], df_proj[['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร']], on='องค์ประกอบ WBS', how='left')
 wbs_details = pd.merge(wbs_details, df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount'), on='องค์ประกอบ WBS', how='left').fillna(0)
@@ -480,6 +505,7 @@ const budgetData = {json.dumps(budget_data)};
 const purchaseData = {json.dumps(purchase_data)};
 const concreteStockData = {json.dumps(concrete_stock_data)};
 const mb52Data = {json.dumps(mb52_data)};
+const stData = {json.dumps(st_data)};
 """
 
 with open('data.js', 'w', encoding='utf-8') as f: f.write(js_content)
