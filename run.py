@@ -326,6 +326,32 @@ try:
 except FileNotFoundError:
     print('ไม่พบไฟล์ ST.txt (หน้างานแก้ไฟจะยังไม่มีข้อมูล Safety)')
 
+# ===== ข้อมูลมิเตอร์ / อุปกรณ์ที่มี Serial (IQ09-M.txt) สำหรับหน้า meter.html =====
+# รูปแบบ: |วัสดุ|คำอธิบายวัสดุ|Plnt|แบทช์|SLoc|Serial No.|เลขประจำ|ผู้ผลิต|PP|มีผลจาก|
+meter_data = []
+meter_as_of = ''
+try:
+    with open('IQ09-M.txt', 'rb') as _f:
+        _raw_m = _f.read()
+    try:
+        _txt_m = _raw_m.decode('utf-8-sig')
+    except UnicodeDecodeError:
+        _txt_m = _raw_m.decode('cp874', errors='replace')
+    _lines_m = _txt_m.splitlines()
+    if _lines_m:
+        _dm = re.match(r'\s*(\d{2}\.\d{2}\.\d{4})', _lines_m[0])
+        meter_as_of = _dm.group(1) if _dm else ''
+    for _line in _lines_m:
+        if not _line.startswith('|'):
+            continue
+        _p = [x.strip() for x in _line.split('|')[1:-1]]
+        if len(_p) < 10 or _p[0] in ('', 'วัสดุ') or _p[0].startswith('-'):
+            continue
+        meter_data.append({'Mat': _p[0], 'Desc': _p[1], 'Plant': _p[2], 'Batch': _p[3], 'Loc': _p[4],
+                           'Serial': _p[5], 'ID': _p[6], 'Maker': _p[7], 'Date': _p[9]})
+except FileNotFoundError:
+    print('ไม่พบไฟล์ IQ09-M.txt (หน้ามิเตอร์จะยังไม่มีข้อมูล)')
+
 df_proj['Status_Short'] = df_proj['สถานะ'].apply(get_short_status)
 wbs_details = pd.merge(df_demand[['วัสดุ', 'องค์ประกอบ WBS', 'โครงข่าย', 'ปริมาณผลต่าง']], df_proj[['องค์ประกอบ WBS', 'ชื่อ', 'สถานะ', 'ผู้สมัคร']], on='องค์ประกอบ WBS', how='left')
 wbs_details = pd.merge(wbs_details, df_demand[df_demand['ปริมาณผลต่าง'] != 0].groupby('องค์ประกอบ WBS')['วัสดุ'].nunique().reset_index(name='PendingCount'), on='องค์ประกอบ WBS', how='left').fillna(0)
@@ -515,6 +541,8 @@ const purchaseData = {json.dumps(purchase_data)};
 const concreteStockData = {json.dumps(concrete_stock_data)};
 const mb52Data = {json.dumps(mb52_data)};
 const stData = {json.dumps(st_data)};
+const meterData = {json.dumps(meter_data)};
+const meterAsOf = {json.dumps(meter_as_of)};
 """
 
 with open('data.js', 'w', encoding='utf-8') as f: f.write(js_content)

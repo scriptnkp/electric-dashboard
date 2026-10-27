@@ -81,3 +81,5 @@ tfoot th { background-color: #34495e; color: #f1c40f; text-align: right; font-si
 .btn-mb52 { background-color: #5c6bc0; box-shadow: 0 4px 10px rgba(92, 107, 192, 0.3); }
 
 .btn-repair { background-color: #6d4c41; box-shadow: 0 4px 10px rgba(109, 76, 65, 0.3); }
+
+.btn-meter { background-color: #388e3c; box-shadow: 0 4px 10px rgba(56, 142, 60, 0.3); }

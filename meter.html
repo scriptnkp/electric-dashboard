@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>มิเตอร์</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="style.css">
+    <script src="data.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .btn-concrete { background-color: #e67e22; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3); }
+        .btn-mb52 { background-color: #5c6bc0; box-shadow: 0 4px 10px rgba(92, 107, 192, 0.3); }
+        .btn-repair { background-color: #6d4c41; box-shadow: 0 4px 10px rgba(109, 76, 65, 0.3); }
+        .btn-meter { background-color: #388e3c; box-shadow: 0 4px 10px rgba(56, 142, 60, 0.3); }
+
+        .header-title { display: flex; align-items: center; gap: 10px; margin: 0 0 15px 0; color: #2c3e50; font-size: 22px; font-weight: bold; flex-wrap: wrap; }
+        .header-title small { font-size: 13px; color: #7f8c8d; font-weight: normal; }
+        .asof { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; border-radius: 14px; padding: 2px 12px; font-size: 12.5px; font-weight: bold; }
+
+        .filter-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 15px; background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #e0e6ed; margin-bottom: 14px; align-items: end; }
+        .filter-grid label { font-weight: bold; color: #34495e; display: block; margin-bottom: 5px; font-size: 13px; }
+        .filter-grid select, .filter-grid textarea { width: 100%; padding: 6px; border-radius: 4px; border: 1px solid #ccc; font-size: 13px; box-sizing: border-box; min-width: 0; font-family: inherit; }
+        .filter-grid select { height: 32px; }
+        .filter-grid textarea { height: 32px; resize: vertical; min-height: 32px; max-height: 160px; }
+        .btn-reset { padding: 6px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; height: 32px; width: 100%; font-size: 13px; }
+        .btn-reset:hover { background: #c0392b; }
+        .wide { grid-column: span 2; }
+        @media (max-width: 700px) { .wide { grid-column: span 1; } }
+
+        .nf-box { display: none; background: #fff8e1; border: 1px solid #ffe082; border-left: 6px solid #f9a825; border-radius: 8px; padding: 10px 16px; margin-bottom: 14px; font-size: 13.5px; color: #5d4037; }
+        .nf-box b { color: #c0392b; }
+        .nf-list { font-family: Consolas, monospace; font-size: 12.5px; word-break: break-all; margin-top: 4px; }
+
+        .summary { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; background: linear-gradient(135deg, #e8f5e9, #f1f8e9); border: 1px solid #a5d6a7; border-left: 8px solid #388e3c; border-radius: 10px; padding: 14px 22px; margin-bottom: 14px; box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .summary .s-icon { font-size: 34px; }
+        .summary .s-label { font-size: 13px; font-weight: bold; color: #558b2f; }
+        .summary .s-num { font-size: 40px; font-weight: bold; color: #1b5e20; line-height: 1.15; }
+        .summary .s-num small { font-size: 18px; font-weight: bold; color: #2e7d32; }
+        .summary .s-sub { font-size: 14px; color: #33691e; margin-left: auto; text-align: right; line-height: 1.6; }
+
+        .sec-head { display: flex; justify-content: space-between; align-items: center; margin: 20px 0 8px 0; flex-wrap: wrap; gap: 10px; }
+        .sec-head h2 { margin: 0; color: #2c3e50; font-size: 18px; }
+        .btn-export { background-color: #27ae60; color: white; border: none; padding: 6px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-export:hover { background-color: #219a52; }
+        .btn-clear-mat { padding: 5px 15px; background: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+        .sel-chip { background: #d5f5e3; color: #1e8449; border: 1px solid #a9dfbf; padding: 3px 10px; border-radius: 14px; font-size: 12px; font-weight: bold; display: none; }
+
+        .table-wrapper { max-height: 62vh; overflow: auto; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background-color: #2c3e50; color: white; padding: 8px 6px; text-align: center; position: sticky; top: 0; z-index: 10; line-height: 1.3; white-space: normal; }
+        td { border: 1px solid #ddd; padding: 5px 7px; vertical-align: middle; white-space: normal; word-break: break-word; }
+        .num-col { text-align: right; white-space: nowrap; }
+        .ctr { text-align: center; white-space: nowrap; }
+        .mono { font-family: Consolas, 'Courier New', monospace; }
+        tfoot td { background: #f4f6f7; font-weight: bold; position: sticky; bottom: 0; border-top: 2px solid #2c3e50; }
+        #sumBody tr { cursor: pointer; }
+        #sumBody tr:hover { background-color: #e8f4f8; }
+        #sumBody tr.selected { background-color: #d5f5e3; }
+        .mat-link { color: #2980b9; font-weight: bold; text-decoration: underline; }
+        .tag { display: inline-block; padding: 1px 9px; border-radius: 10px; font-size: 11.5px; font-weight: bold; color: #fff; }
+        .tag-m { background: #388e3c; } .tag-c { background: #8e44ad; } .tag-v { background: #2980b9; } .tag-o { background: #7f8c8d; }
+
+        .pager { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 25px; font-size: 13px; color: #34495e; }
+        .pager button { border: 1px solid #388e3c; background: #fff; color: #2e7d32; border-radius: 4px; padding: 5px 14px; font-weight: bold; cursor: pointer; font-family: inherit; }
+        .pager button:hover:not(:disabled) { background: #388e3c; color: #fff; }
+        .pager button:disabled { opacity: 0.4; cursor: not-allowed; }
+        .pager select { padding: 4px; border-radius: 4px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="index.html" class="nav-btn btn-graph">📊 หน้ากราฟ</a>
+        <a href="demand.html" class="nav-btn btn-demand">📋 ตารางความต้องการ</a>
+        <a href="concrete.html" class="nav-btn btn-concrete">🏗️ ผลิตภัณฑ์คอนกรีต</a>
+        <a href="mb52.html" class="nav-btn btn-mb52">🏬 คงคลัง MB52</a>
+        <a href="repair.html" class="nav-btn btn-repair">🔧 งานแก้ไฟ</a>
+        <a href="meter.html" class="nav-btn btn-meter" style="box-shadow: 0 0 0 2px white;">⚡ มิเตอร์</a>
+        <a href="me2n.html" class="nav-btn btn-me2n">📦 วัสดุรอนำเข้า (ME2N)</a>
+        <a href="plan1.html" class="nav-btn btn-plan">🛒 แผนซื้อ กฟฉ.1</a>
+        <a href="allocate.html" class="nav-btn btn-alloc">🚚 จัดสรรให้คลังต่างๆ</a>
+        <a href="budget.html" class="nav-btn btn-budget">💰 งบเงิน</a>
+        <a href="purchase.html" class="nav-btn btn-purchase">🛒 รายการจัดซื้อ</a>
+        <div class="update-box">
+            🕒 อัปเดตล่าสุด: <span id="lastUpdatedText">กำลังอัปเดต...</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header-title">⚡ มิเตอร์ และอุปกรณ์วัดที่มี Serial <small>รายงาน IQ09 (Serial Number) โรงงาน D060</small> <span class="asof" id="asOf"></span></div>
+
+        <div class="filter-grid">
+            <div><label>🏷️ ประเภท</label><select id="typeFilter" onchange="onFilter()"><option value="ALL">✅ ทุกประเภท</option></select></div>
+            <div><label>🏭 ผู้ผลิต</label><select id="makerFilter" onchange="onFilter()"><option value="ALL">✅ ทุกผู้ผลิต</option></select></div>
+            <div><label>📍 ที่เก็บสินค้า</label><select id="locFilter" onchange="onFilter()"><option value="ALL">✅ ทุกที่เก็บ</option></select></div>
+            <div><label>📅 มีผลจาก (วันที่)</label><select id="dateFilter" onchange="onFilter()"><option value="ALL">✅ ทุกวันที่</option></select></div>
+            <div id="plantBox" style="display:none;"><label>🏢 โรงงาน</label><select id="plantFilter" onchange="onFilter()"></select></div>
+            <div class="wide"><label>🔍 ค้นหา Serial / เลขประจำ (MAC) / รหัส — วางได้หลายรายการ คั่นด้วยเว้นวรรค, คอมมา หรือขึ้นบรรทัดใหม่</label>
+                <textarea id="searchBox" rows="1" oninput="onFilter()" placeholder="เช่น 6800775382 หรือ 00:68:00:77:53:82"></textarea></div>
+            <div><button class="btn-reset" onclick="resetFilters()">🔄 ล้างตัวกรอง</button></div>
+        </div>
+
+        <div class="nf-box" id="nfBox"></div>
+
+        <div class="summary">
+            <div class="s-icon">⚡</div>
+            <div>
+                <div class="s-label">สรุป: มีทั้งหมด (รวมทุกรายการ)</div>
+                <div class="s-num"><span id="sTotal">0</span> <small>เครื่อง</small></div>
+            </div>
+            <div class="s-sub" id="sSub"></div>
+        </div>
+
+        <!-- ตารางที่ 1 -->
+        <div class="sec-head">
+            <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                <h2>1. สรุปตามรายการวัสดุ (คลิกแถวเพื่อกรองตารางที่ 2)</h2>
+                <span class="sel-chip" id="selChip"></span>
+            </div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-export" onclick="exportSum()">📥 Export Excel (.xlsx)</button>
+                <button class="btn-clear-mat" onclick="selectedMat = null; page = 1; render()">ล้างการเลือกวัสดุ</button>
+            </div>
+        </div>
+        <div class="table-wrapper" style="max-height: 340px;">
+            <table>
+                <thead><tr>
+                    <th style="min-width:130px;">รหัสวัสดุ</th><th style="min-width:300px;">คำอธิบายวัสดุ</th>
+                    <th style="background:#388e3c;">จำนวน (เครื่อง)</th><th>ที่เก็บ</th>
+                </tr></thead>
+                <tbody id="sumBody"></tbody>
+                <tfoot id="sumFoot"></tfoot>
+            </table>
+        </div>
+
+        <!-- ตารางที่ 2 -->
+        <div class="sec-head">
+            <h2>2. รายการ Serial Number (รายเครื่อง)</h2>
+            <button class="btn-export" onclick="exportDet()">📥 Export Excel (.xlsx) — ทุกแถวที่กรอง</button>
+        </div>
+        <div class="table-wrapper">
+            <table>
+                <thead><tr>
+                    <th>#</th><th style="min-width:120px;">รหัสวัสดุ</th><th style="min-width:240px;">คำอธิบายวัสดุ</th>
+                    <th style="background:#388e3c; min-width:120px;">Serial No.</th><th style="min-width:150px;">เลขประจำ</th>
+                    <th>ผู้ผลิต</th><th>ที่เก็บ</th><th>แบทช์</th><th>มีผลจาก</th>
+                </tr></thead>
+                <tbody id="detBody"></tbody>
+            </table>
+        </div>
+        <div class="pager">
+            <div id="pageInfo"></div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <label>แสดงหน้าละ <select id="pageSize" onchange="page = 1; render()"><option>50</option><option selected>100</option><option>200</option><option>500</option></select> แถว</label>
+                <button id="btnPrev" onclick="gotoPage(page - 1)">◀ ก่อนหน้า</button>
+                <button id="btnNext" onclick="gotoPage(page + 1)">ถัดไป ▶</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    const BLANK = '__BLANK__';
+    let all = [], selectedMat = null, page = 1;
+    let exportSumRows = [], exportDetRows = [];
+
+    const fmt = n => (Number(n) || 0).toLocaleString('en-US');
+    const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const dateKey = d => { const m = /^(\d{2})\.(\d{2})\.(\d{4})$/.exec(d || ''); return m ? m[3] + m[2] + m[1] : ''; };
+    const normId = s => String(s || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+    const typeOf = d => /^METER/i.test(d) ? 'มิเตอร์' : (/^CT\b/i.test(d) ? 'CT (หม้อแปลงกระแส)' : (/^VT\b/i.test(d) ? 'VT (หม้อแปลงแรงดัน)' : 'อื่นๆ'));
+    const tagCls = t => t === 'มิเตอร์' ? 'tag-m' : (t.startsWith('CT') ? 'tag-c' : (t.startsWith('VT') ? 'tag-v' : 'tag-o'));
+    const locLabel = l => l === '' ? '(ไม่ระบุ)' : l;
+
+    function init() {
+        if (typeof lastUpdated !== 'undefined') document.getElementById('lastUpdatedText').innerText = lastUpdated;
+        if (typeof meterData === 'undefined' || !meterData.length) {
+            document.getElementById('sumBody').innerHTML = '<tr><td colspan="7" style="text-align:center; color:#e74c3c; padding:20px; font-weight:bold;">⚠️ ยังไม่มีข้อมูลมิเตอร์ — อัปโหลดไฟล์ IQ09-M.txt และ run.py ตัวใหม่ แล้วรอ GitHub Action สร้าง data.js ใหม่ จากนั้นกดรีเฟรช (F5)</td></tr>';
+            return;
+        }
+        if (typeof meterAsOf !== 'undefined' && meterAsOf) document.getElementById('asOf').innerText = '📅 ข้อมูล SAP ณ วันที่ ' + meterAsOf;
+
+        all = meterData.map(r => ({ ...r, Type: typeOf(r.Desc), DK: dateKey(r.Date), K: (r.Serial + ' ' + normId(r.ID) + ' ' + normId(r.Mat) + ' ' + r.Desc).toUpperCase(), KS: normId(r.Serial), KI: normId(r.ID) }));
+
+        const fill = (id, vals, fmtv) => vals.forEach(v => document.getElementById(id).appendChild(new Option(fmtv ? fmtv(v) : v, v)));
+        fill('typeFilter', [...new Set(all.map(r => r.Type))].sort());
+        fill('makerFilter', [...new Set(all.map(r => r.Maker))].sort());
+        fill('locFilter', [...new Set(all.map(r => r.Loc === '' ? BLANK : r.Loc))].sort(), v => v === BLANK ? '(ไม่ระบุ)' : v);
+        const dates = [...new Set(all.map(r => r.Date))].sort((a, b) => dateKey(b).localeCompare(dateKey(a)));
+        fill('dateFilter', dates);
+        const plants = [...new Set(all.map(r => r.Plant))].sort();
+        if (plants.length > 1) {
+            document.getElementById('plantBox').style.display = '';
+            plants.forEach(p => document.getElementById('plantFilter').appendChild(new Option(p, p)));
+            document.getElementById('plantFilter').value = plants.includes('D060') ? 'D060' : plants[0];
+        }
+        render();
+    }
+
+    function onFilter() { selectedMat = null; page = 1; render(); }
+    function resetFilters() {
+        ['typeFilter', 'makerFilter', 'locFilter', 'dateFilter'].forEach(id => document.getElementById(id).value = 'ALL');
+        document.getElementById('searchBox').value = '';
+        selectedMat = null; page = 1; render();
+    }
+
+    function searchTerms() {
+        return document.getElementById('searchBox').value.split(/[\s,;]+/).map(t => t.trim()).filter(t => normId(t).length >= 3);
+    }
+
+    // ignore = ตัวกรองที่ไม่ใช้ (เพื่อให้ chip แสดงทุกตัวเลือก)
+    function baseFilter(ignore) {
+        const g = id => document.getElementById(id).value;
+        const type = g('typeFilter'), maker = g('makerFilter'), loc = g('locFilter'), date = g('dateFilter');
+        const plant = document.getElementById('plantBox').style.display === 'none' ? 'ALL' : g('plantFilter');
+        const terms = searchTerms().map(normId);
+        return all.filter(r => {
+            if (plant !== 'ALL' && r.Plant !== plant) return false;
+            if (type !== 'ALL' && r.Type !== type) return false;
+            if (ignore !== 'maker' && maker !== 'ALL' && r.Maker !== maker) return false;
+            if (loc !== 'ALL' && (r.Loc === '' ? BLANK : r.Loc) !== loc) return false;
+            if (ignore !== 'date' && date !== 'ALL' && r.Date !== date) return false;
+            if (terms.length && !terms.some(t => r.KS.includes(t) || r.KI.includes(t) || r.K.includes(t))) return false;
+            return true;
+        });
+    }
+
+    function render() {
+        if (!all.length) return;
+        const rows = baseFilter(null);
+
+        // ----- ไม่พบ serial ที่ค้นหา -----
+        const terms = searchTerms();
+        const nf = document.getElementById('nfBox');
+        if (terms.length > 1) {
+            const missing = terms.filter(t => { const n = normId(t); return !all.some(r => r.KS.includes(n) || r.KI.includes(n)); });
+            nf.style.display = 'block';
+            nf.innerHTML = `🔍 ค้นหา <b>${terms.length}</b> รายการ — พบ <b>${terms.length - missing.length}</b> ไม่พบ <b>${missing.length}</b>`
+                + (missing.length ? `<div class="nf-list">ไม่พบ: ${esc(missing.slice(0, 80).join(', '))}${missing.length > 80 ? ' ...' : ''}</div>` : ' ✅ พบครบทุกรายการ');
+        } else nf.style.display = 'none';
+
+        // ----- สรุปจำนวนเครื่องรวมทั้งหมด -----
+        const nMat = new Set(rows.map(r => r.Mat)).size;
+        document.getElementById('sTotal').innerText = fmt(rows.length);
+        document.getElementById('sSub').innerHTML = 'จาก <b>' + fmt(nMat) + '</b> รายการวัสดุ' + (rows.length === all.length ? '<br>ทั้งหมดในรายงาน' : '<br>ตามตัวกรอง (จากทั้งหมด ' + fmt(all.length) + ' เครื่อง)');
+
+        // ----- ตารางที่ 1 -----
+        const sum = {};
+        rows.forEach(r => {
+            const s = sum[r.Mat] = sum[r.Mat] || { mat: r.Mat, desc: r.Desc, locs: new Set(), n: 0 };
+            s.n++; s.locs.add(locLabel(r.Loc));
+        });
+        if (selectedMat && !sum[selectedMat]) selectedMat = null;
+        const mats = Object.values(sum).sort((a, b) => a.mat.localeCompare(b.mat));
+        document.getElementById('sumBody').innerHTML = mats.map(m => `<tr class="${selectedMat === m.mat ? 'selected' : ''}" onclick="selectMat('${m.mat}')">
+            <td class="ctr"><span class="mat-link">${m.mat}</span></td><td>${esc(m.desc)}</td>
+            <td class="num-col"><b>${fmt(m.n)}</b></td><td class="ctr">${[...m.locs].join(', ')}</td></tr>`).join('') || '<tr><td colspan="4" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
+        document.getElementById('sumFoot').innerHTML = mats.length ? `<tr><td colspan="2" style="text-align:right;">รวมทั้งหมด ${fmt(mats.length)} รายการวัสดุ</td><td class="num-col">${fmt(rows.length)} เครื่อง</td><td></td></tr>` : '';
+        exportSumRows = mats.map(m => [m.mat, m.desc, m.n, [...m.locs].join(', ')]);
+
+        const chip = document.getElementById('selChip');
+        if (selectedMat) { chip.style.display = 'inline-block'; chip.innerText = '🔎 กำลังกรองวัสดุ: ' + selectedMat; } else chip.style.display = 'none';
+
+        // ----- ตารางที่ 2 (แบ่งหน้า) -----
+        let det = selectedMat ? rows.filter(r => r.Mat === selectedMat) : rows;
+        det = det.slice().sort((a, b) => a.Mat.localeCompare(b.Mat) || a.Serial.localeCompare(b.Serial, undefined, { numeric: true }));
+        const size = parseInt(document.getElementById('pageSize').value, 10);
+        const pages = Math.max(1, Math.ceil(det.length / size));
+        if (page > pages) page = pages;
+        const start = (page - 1) * size, slice = det.slice(start, start + size);
+        document.getElementById('detBody').innerHTML = slice.map((r, i) => `<tr><td class="ctr">${start + i + 1}</td><td class="ctr">${r.Mat}</td><td>${esc(r.Desc)}</td>
+            <td class="ctr mono"><b>${esc(r.Serial)}</b></td><td class="ctr mono">${esc(r.ID)}</td><td class="ctr">${esc(r.Maker)}</td><td class="ctr">${locLabel(r.Loc)}</td><td class="ctr">${esc(r.Batch)}</td><td class="ctr">${r.Date}</td></tr>`).join('')
+            || '<tr><td colspan="9" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับเงื่อนไข</td></tr>';
+        document.getElementById('pageInfo').innerText = det.length ? `แสดง ${fmt(start + 1)}–${fmt(Math.min(start + size, det.length))} จาก ${fmt(det.length)} เครื่อง | หน้า ${page}/${pages}` : 'ไม่มีข้อมูล';
+        document.getElementById('btnPrev').disabled = page <= 1;
+        document.getElementById('btnNext').disabled = page >= pages;
+        exportDetRows = det.map((r, i) => [i + 1, r.Mat, r.Desc, r.Type, r.Serial, r.ID, r.Maker, r.Plant, r.Loc, r.Batch, r.Date]);
+    }
+
+    function selectMat(m) { selectedMat = (selectedMat === m) ? null : m; page = 1; render(); }
+    function gotoPage(p) { page = p; render(); }
+
+    // ---------- Export Excel ----------
+    function filterInfo() {
+        const sel = id => { const e = document.getElementById(id); return e.value === 'ALL' ? 'ทั้งหมด' : e.options[e.selectedIndex].text; };
+        const q = document.getElementById('searchBox').value.trim().replace(/\s+/g, ' ');
+        return 'ประเภท: ' + sel('typeFilter') + ' | ผู้ผลิต: ' + sel('makerFilter') + ' | ที่เก็บ: ' + sel('locFilter') + ' | มีผลจาก: ' + sel('dateFilter')
+            + (q ? ' | ค้นหา: ' + (q.length > 80 ? q.slice(0, 80) + '...' : q) : '') + (selectedMat ? ' | วัสดุ: ' + selectedMat : '');
+    }
+    const asOfTxt = () => 'ข้อมูล SAP ณ วันที่ ' + (typeof meterAsOf !== 'undefined' && meterAsOf ? meterAsOf : '-');
+    function saveAoa(aoa, widths, sheet, prefix) {
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = widths.map(w => ({ wch: w }));
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, sheet);
+        XLSX.writeFile(wb, prefix + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    }
+    function exportSum() {
+        saveAoa([['มิเตอร์ : สรุปตามรายการวัสดุ (ตารางที่ 1)'], [filterInfo(), '', '', asOfTxt()], [],
+            ['รหัสวัสดุ', 'คำอธิบายวัสดุ', 'จำนวน (เครื่อง)', 'ที่เก็บ'], ...exportSumRows,
+            ['', 'รวมทั้งหมด', exportSumRows.reduce((a, r) => a + r[2], 0), '']], [18, 52, 16, 12], 'สรุป', 'Meter_Summary');
+    }
+    function exportDet() {
+        saveAoa([['มิเตอร์ : รายการ Serial Number (ตารางที่ 2)'], [filterInfo(), '', '', '', '', '', '', '', '', asOfTxt()], [],
+            ['ลำดับ', 'รหัสวัสดุ', 'คำอธิบายวัสดุ', 'ประเภท', 'Serial No.', 'เลขประจำ', 'ผู้ผลิต', 'โรงงาน', 'ที่เก็บ', 'แบทช์', 'มีผลจาก'], ...exportDetRows],
+            [8, 18, 48, 22, 16, 22, 16, 9, 9, 8, 12], 'Serial', 'Meter_Serial');
+    }
+
+    window.addEventListener('load', init);
+</script>
+</body>
+</html>
