@@ -267,7 +267,10 @@
         <div class="modal-content">
             <div class="modal-header">
                 <span id="matModalTitle" style="font-size: 16px;">📋 รายการ WBS ที่ใช้อุปกรณ์</span>
-                <button class="close-btn" onclick="closeModal('matModal')">❌ ปิด</button>
+                <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+                    <button class="close-btn" style="background:#27ae60;" onclick="exportMatModal()">📥 Export Excel (.xlsx)</button>
+                    <button class="close-btn" onclick="closeModal('matModal')">❌ ปิด</button>
+                </div>
             </div>
             <div class="modal-body">
                 <table style="width: 100%;">
@@ -966,6 +969,7 @@
         
         let data = getMatRows(matCode);
         let h = '';
+        const exportRows = [];   // ข้อมูลสำหรับ Export Excel (ตรงกับที่แสดงใน popup)
         
         const activeWbsSet = new Set(currentWBSList.map(w => w.WBS));
 
@@ -976,6 +980,7 @@
                 if(groupName !== 'ALL' && wbsGroup !== groupName) showRow = false;
 
                 if(showRow) {
+                    exportRows.push([r.WBS, r.Network, r.Project_Name, r.Qty, r.PendingCount || '', r.Status, r.Applicant]);
                     h += `<tr>
                         <td style="font-weight:bold; color:#3498db;" class="nowrap-col">
                             <span class="link-text" onclick="showWbsDetails('${r.WBS}')">${r.WBS}</span>
@@ -991,10 +996,32 @@
             }
         });
         
+        window.matModalExport = { code: matCode, desc: desc, scope: titleSuffix, rows: exportRows };
         document.getElementById('matModalBodyContent').innerHTML = h || '<tr><td colspan="7" style="text-align:center; padding:20px;">ไม่มีข้อมูลที่ตรงกับตัวกรอง</td></tr>';
         
         document.getElementById('wbsModal').classList.remove('active'); 
         document.getElementById('matModal').classList.add('active');
+    }
+
+    // Export รายการใน popup "รายการ WBS ที่ใช้อุปกรณ์" เป็น .xlsx
+    function exportMatModal() {
+        const m = window.matModalExport;
+        if (!m) return;
+        const total = m.rows.reduce((s, r) => s + (Number(r[3]) || 0), 0);
+        const aoa = [
+            ['รายการ WBS ที่ใช้อุปกรณ์: ' + m.code + ' ' + m.desc],
+            ['ขอบเขต: ' + m.scope, '', '', 'จำนวน ' + m.rows.length + ' WBS'],
+            [],
+            ['WBS', 'โครงข่าย', 'ชื่องาน', 'ปริมาณ', 'คงเหลือ (รายการ)', 'สถานะ', 'ผู้ควบคุม'],
+            ...m.rows,
+            ['', '', 'รวม', total, '', '', '']
+        ];
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!cols'] = [{ wch: 26 }, { wch: 14 }, { wch: 50 }, { wch: 10 }, { wch: 16 }, { wch: 10 }, { wch: 24 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'WBS');
+        const safe = s => String(s).replace(/[\\\/:*?"<>|\s]+/g, '_');
+        XLSX.writeFile(wb, 'WBS_' + m.code + '_' + safe(m.scope) + '_' + new Date().toISOString().slice(0, 10) + '.xlsx');
     }
 
     function closeModal(modalId) {

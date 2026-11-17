@@ -11,6 +11,7 @@
         .btn-concrete { background-color: #e67e22; box-shadow: 0 4px 10px rgba(230, 126, 34, 0.3); }
         .btn-mb52 { background-color: #5c6bc0; box-shadow: 0 4px 10px rgba(92, 107, 192, 0.3); }
         .btn-repair { background-color: #6d4c41; box-shadow: 0 4px 10px rgba(109, 76, 65, 0.3); }
+        .btn-meter { background-color: #388e3c; box-shadow: 0 4px 10px rgba(56, 142, 60, 0.3); }
 
         /* ฟอนต์ราชการ: TH SarabunPSK (ถ้าเครื่องไม่มี ใช้ Tahoma ย่อขนาดให้ใกล้เคียงแทน) */
         @font-face { font-family: 'FormFallback'; src: local('Tahoma'), local('Segoe UI'), local('Arial'); font-weight: 400; size-adjust: 80%; }
@@ -155,6 +156,7 @@
         <a href="concrete.html" class="nav-btn btn-concrete">🏗️ ผลิตภัณฑ์คอนกรีต</a>
         <a href="mb52.html" class="nav-btn btn-mb52">🏬 คงคลัง MB52</a>
         <a href="repair.html" class="nav-btn btn-repair" style="box-shadow: 0 0 0 2px white;">🔧 งานแก้ไฟ</a>
+        <a href="meter.html" class="nav-btn btn-meter">⚡ มิเตอร์</a>
         <a href="me2n.html" class="nav-btn btn-me2n">📦 วัสดุรอนำเข้า (ME2N)</a>
         <a href="plan1.html" class="nav-btn btn-plan">🛒 แผนซื้อ กฟฉ.1</a>
         <a href="allocate.html" class="nav-btn btn-alloc">🚚 จัดสรรให้คลังต่างๆ</a>
@@ -257,6 +259,7 @@
             <div class="note">
                 รายการที่เลือกและจำนวนที่แก้ไว้ <b>บันทึกอัตโนมัติในเครื่องนี้อยู่แล้ว</b> ส่วนนี้ใช้เมื่อต้องการให้เครื่องอื่นหรือคนอื่นเห็นรายการเดียวกัน<br>
                 • ข้อมูลถูกเก็บในไฟล์แยกบน branch ชื่อ <b>repair-data</b> ไม่กระทบ branch main และไม่ทำให้ GitHub Action รัน<br>
+                • <b>ใส่ Token เฉพาะเครื่องที่ต้องการให้เป็นผู้บันทึก</b> เครื่องอื่นไม่ต้องใส่ ก็เห็นรายการที่บันทึกไว้ได้ (อ่านอย่างเดียว)<br>
                 • Token เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น ไม่ถูกเขียนลงไฟล์ใดๆ และส่งไปที่ api.github.com เท่านั้น <b>ห้ามนำ Token ไปใส่ในไฟล์ใน repo</b><br>
                 • repo เป็น Public ใครก็เปิดอ่านไฟล์ที่บันทึกได้ (เป็นรหัสพัสดุและจำนวน ไม่มีชื่อบุคคล)<br>
                 • สร้าง Token: GitHub → Settings → Developer settings → Fine-grained tokens → เลือกเฉพาะ repo นี้ → Permissions: <b>Contents = Read and write</b>
@@ -376,7 +379,7 @@
 
     // ---------- บันทึกรายการที่เลือกไว้ (เครื่องนี้ + GitHub) ----------
     const SAVE_KEY = 'repairSaved', GH_CFG_KEY = 'repairGhCfg', GH_TOKEN_KEY = 'repairGhToken', SYNC_KEY = 'repairSynced';
-    let ghTimer = null, savedAt = null, ghNote = '', ghWarn = false;
+    let ghTimer = null, savedAt = null, ghNote = '', ghWarn = false, remoteAt = null;
 
     function loadStore() { try { return JSON.parse(localStorage.getItem(SAVE_KEY) || '{}'); } catch (e) { return {}; } }
     function saveStore(s) { try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { } }
@@ -422,10 +425,11 @@
             : '💾 ยังไม่มีรายการที่เลือก (ระบบบันทึกให้อัตโนมัติเมื่อเลือก)';
         const g = document.getElementById('ghStatus'), c = ghCfg();
         let txt = ghNote, warn = ghWarn;
+        const when = remoteAt ? ' · รายการบน GitHub อัปเดตล่าสุด ' + remoteAt.toLocaleString('th-TH', { dateStyle: 'short', timeStyle: 'short' }) : '';
         if (!txt) {
-            if (!c.token) txt = '☁️ GitHub: ยังไม่ได้ตั้งค่า Token (ใช้แชร์ข้ามเครื่อง กด ⚙️)';
+            if (!c.token) txt = '👀 โหมดดูอย่างเดียว: เห็นรายการที่บันทึกไว้บน GitHub ได้ แต่บันทึกขึ้นไม่ได้ (ต้องมี Token)' + when;
             else if (isDirty()) { txt = c.auto ? '☁️ รอบันทึกขึ้น GitHub อัตโนมัติ...' : '⚠️ มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึกขึ้น GitHub'; warn = !c.auto; }
-            else txt = '☁️ GitHub: ตรงกับในเครื่องนี้';
+            else txt = '☁️ GitHub: ตรงกับในเครื่องนี้' + when;
         }
         g.innerText = txt; g.className = 'sr-gh' + (warn ? ' warn' : '');
     }
@@ -451,13 +455,23 @@
         if (opt.body) headers['Content-Type'] = 'application/json';
         return fetch('https://api.github.com/repos/' + cfg.repo + endpoint, { method: opt.method || 'GET', headers, body: opt.body ? JSON.stringify(opt.body) : undefined, cache: 'no-store' });
     }
-    async function ghGetFile(cfg) {
-        const res = await ghApi(cfg, '/contents/' + encodeURI(cfg.path) + '?ref=' + encodeURIComponent(cfg.branch));
-        if (res.status === 404) return { data: {}, sha: null };
-        if (!res.ok) throw new Error('GitHub ตอบกลับ ' + res.status);
-        const j = await res.json();
-        let data = {}; try { data = JSON.parse(b64dec(j.content) || '{}'); } catch (e) { data = {}; }
-        return { data, sha: j.sha };
+    async function ghGetFile(cfg, readOnly) {
+        let res = null;
+        try { res = await ghApi(cfg, '/contents/' + encodeURI(cfg.path) + '?ref=' + encodeURIComponent(cfg.branch)); } catch (e) { res = null; }
+        if (res && res.status === 404) return { data: {}, sha: null };
+        if (res && res.ok) {
+            const j = await res.json();
+            let data = {}; try { data = JSON.parse(b64dec(j.content) || '{}'); } catch (e) { data = {}; }
+            return { data, sha: j.sha };
+        }
+        // ติด rate limit (403/429) หรือเชื่อมต่อ API ไม่ได้ -> อ่านผ่าน raw (เฉพาะการอ่าน; การเขียนต้องใช้ API)
+        if (readOnly) {
+            const url = 'https://raw.githubusercontent.com/' + cfg.repo + '/' + encodeURIComponent(cfg.branch) + '/' + encodeURI(cfg.path) + '?t=' + Math.floor(Date.now() / 60000);
+            const rr = await fetch(url, { cache: 'no-store' });
+            if (rr.status === 404) return { data: {}, sha: null };
+            if (rr.ok) { try { return { data: JSON.parse(await rr.text() || '{}'), sha: null }; } catch (e) { return { data: {}, sha: null }; } }
+        }
+        throw new Error('GitHub ตอบกลับ ' + (res ? res.status : 'ไม่ได้'));
     }
     async function ghEnsureBranch(cfg) {
         const ref = await ghApi(cfg, '/git/ref/heads/' + encodeURIComponent(cfg.branch));
@@ -476,7 +490,7 @@
     // บันทึกรายการของหน่วยงานที่เปิดอยู่ขึ้น GitHub (อ่านไฟล์ล่าสุดก่อน แล้วแก้เฉพาะหน่วยงานนี้)
     async function ghSave(silent) {
         const cfg = ghCfg();
-        if (!cfg.token) { if (!silent) { toast('ยังไม่ได้ใส่ Token — ตั้งค่าที่ ⚙️ ตั้งค่า GitHub'); openGh(); } return; }
+        if (!cfg.token) { if (!silent) toast('เครื่องนี้ไม่มี Token จึงบันทึกขึ้น GitHub ไม่ได้ (ยังดูรายการที่คนอื่นบันทึกไว้ได้ปกติ) — เครื่องที่จะบันทึกให้ตั้งค่าที่ ⚙️'); return; }
         if (!unit) return;
         setGhNote('⏳ กำลังบันทึกขึ้น GitHub...');
         try {
@@ -506,9 +520,11 @@
         if (!unit) return;
         const cfg = ghCfg(), code = unit.code;
         try {
-            const { data } = await ghGetFile(cfg);
+            const { data } = await ghGetFile(cfg, true);
             if (!unit || unit.code !== code) return;
             const remote = data[code], local = loadStore()[code];
+            remoteAt = (remote && remote.ts) ? new Date(remote.ts) : null;
+            updateSaveStatus();
             if (!remote || !remote.sel || !remote.sel.length) { if (explicit) toast('ยังไม่มีรายการที่บันทึกไว้บน GitHub สำหรับหน่วยงานนี้'); return; }
             if (!explicit && local && local.ts >= remote.ts) return;
             applySaved(remote);
